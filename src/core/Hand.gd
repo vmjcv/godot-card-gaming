@@ -32,6 +32,7 @@ func _on_Deck_input_event(event) -> void:
 func _on_DiscardRandom_Button_pressed() -> void:
 	var card = get_random_card()
 	if card:
+		card.change_owning_container(cfc.NMAP.discard.get_card_group_name())
 		card.move_to(cfc.NMAP.discard)
 
 
@@ -52,5 +53,11 @@ func draw_card(pile : Pile = cfc.NMAP.deck) -> Card:
 	var card: Card = pile.get_top_card()
 	# A basic function to pull a card from out deck into our hand.
 	if card and get_card_count() < hand_size: # prevent from exceeding our hand size
+		card.change_owning_container(get_card_group_name())
 		card.move_to(self)
 	return card
+
+
+# Get container name
+func get_container_name():
+	return "hand"

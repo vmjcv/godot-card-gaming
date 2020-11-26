@@ -70,10 +70,10 @@ func load_test_cards() -> void:
 		test_card_array.append(c.instance())
 	for card in test_card_array:
 		$Deck.add_child(card)
+		card.change_owning_container($Deck.get_card_group_name())
 		# warning-ignore:return_value_discarded
 		card.set_is_faceup(false,true)
 		card._determine_idle_state()
 		allCards.append(card) # Just keeping track of all the instanced card objects for demo purposes
 		#card.modulate.a = 0 # We use this for a nice transition effect
 	$Deck.reorganize_stack()
-

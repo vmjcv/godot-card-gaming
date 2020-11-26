@@ -122,12 +122,7 @@ func get_class():
 
 # Returns an array with all children nodes which are of Card class
 func get_all_cards() -> Array:
-	var cardsArray := []
-	for obj in get_children():
-		# This comparison will return null if obj is not a Card class.
-		if obj as Card:
-			cardsArray.append(obj)
-	return cardsArray
+	return get_tree().get_nodes_in_group(get_card_group_name())
 
 
 # Returns an int with the amount of children nodes which are of Card class
@@ -186,7 +181,7 @@ func translate_card_index_to_node_index(index: int) -> int:
 	# First we check if the requested index is higher than the amount of cards
 	# If so, we give back the next available index
 	if index >= len(all_cards):
-		node_index = len(get_child_count())
+		node_index = get_child_count()
 		print("WARNING: Higher card index than hosted cards requested. Returning last position.")
 	else:
 		# If the requester index is not higher than the number of cards
@@ -195,3 +190,11 @@ func translate_card_index_to_node_index(index: int) -> int:
 		var card_at_index = all_cards[index]
 		node_index = card_at_index.get_index()
 	return node_index
+
+# Get container name
+func get_container_name():
+	return "base_card_container"
+
+# Get the card group name
+func get_card_group_name():
+	return "%s_card" % [get_container_name()]

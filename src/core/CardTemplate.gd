@@ -1893,3 +1893,13 @@ func _execute_scripts() -> void:
 				state_scripts = card_scripts.get("pile", [])
 		scripting_engine.running_scripts = state_scripts
 		scripting_engine.run_next_script()
+
+func change_owning_container(_group_name=null):
+	var built_in_group = ["idle_process","idle_process_internal","physics_process","physics_process_internal",]
+	print(get_groups())
+	for group_name in get_groups():
+		if not (group_name in built_in_group):
+			remove_from_group(group_name)
+	if _group_name:
+		add_to_group(_group_name)
+	print(_group_name)
