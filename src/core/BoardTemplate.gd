@@ -52,8 +52,20 @@ func _UT_interpolate_mouse_move(newpos: Vector2,
 # 	return cardsArray
 
 # Returns an array with all children nodes which are of Card class
-func get_all_cards() -> Array:
-	return get_tree().get_nodes_in_group(get_card_group_name())
+func get_all_cards(must_child:=true,must_direct=false) -> Array:
+	var all_card = get_tree().get_nodes_in_group(get_card_group_name())
+	if not must_child:
+		return all_card
+	var new_all_card = []
+	if must_direct:
+		for card in all_card:
+			if card.get_parent()==self:
+				new_all_card.append(card)
+		return new_all_card
+	for card in all_card:
+		if is_a_parent_of(card):
+			new_all_card.append(card)
+	return new_all_card
 
 # Returns an int with the amount of children nodes which are of Card class
 func get_card_count() -> int:

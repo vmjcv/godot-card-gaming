@@ -37,7 +37,7 @@ func _on_View_Button_pressed() -> void:
 	# as it will bug-out
 	$Control/ManipulationButtons.visible = false
 	# We set the size of the grid to hold slightly scaled-down cards
-	for card in get_all_cards(false):
+	for card in get_all_cards():
 		# We remove the card to rehost it in the popup grid container
 		remove_child(card)
 		_slot_card_into_popup(card)
@@ -103,29 +103,13 @@ func reorganize_stack() -> void:
 				-1 * get_card_index(c)):
 			c.position = Vector2(0.5 * get_card_index(c),
 					-1 * get_card_index(c))
-					
+
 
 # Override the godot builtin move_child() method,
 # to make sure the $Control node is always drawn on top of Card nodes
 func move_child(child_node, to_position) -> void:
 	.move_child(child_node, to_position)
 	$Control.raise()
-
-
-# Overrides CardContainer function to include cards in the popup window
-# Returns an array with all children nodes which are of Card class
-func get_all_cards(scanViewPopup := true) -> Array:
-	var cardsArray := .get_all_cards()
-	# For piles, we need to check if the card objects are inside the ViewPopup.
-	if not len(cardsArray) and scanViewPopup:
-		if $ViewPopup/CardView.get_child_count():
-			# We know it's not possible to have a temp control container
-			# (due to the garbage collection)
-			# So we know if we find one, it will have 1 child,
-			# which is a Card object.
-			for obj in $ViewPopup/CardView.get_children():
-				cardsArray.append(obj.get_child(0))
-	return cardsArray
 
 
 # Return the top a Card object from the pile.
