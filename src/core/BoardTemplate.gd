@@ -44,13 +44,16 @@ func _UT_interpolate_mouse_move(newpos: Vector2,
 	_UT_interpolation_requested = true
 
 
+# # Returns an array with all children nodes which are of Card class
+# func get_all_cards() -> Array:
+# 	var cardsArray := []
+# 	for obj in get_children():
+# 		if obj as Card: cardsArray.append(obj)
+# 	return cardsArray
+
 # Returns an array with all children nodes which are of Card class
 func get_all_cards() -> Array:
-	var cardsArray := []
-	for obj in get_children():
-		if obj as Card: cardsArray.append(obj)
-	return cardsArray
-
+	return get_tree().get_nodes_in_group(get_card_group_name())
 
 # Returns an int with the amount of children nodes which are of Card class
 func get_card_count() -> int:
@@ -65,3 +68,11 @@ func get_card(idx: int) -> Card:
 # Returns an int of the index of the card object requested
 func get_card_index(card: Card) -> int:
 	return get_all_cards().find(card)
+
+# Get container name
+func get_container_name():
+	return "board"
+
+# Get the card group name
+func get_card_group_name():
+	return "%s_card" % [get_container_name()]

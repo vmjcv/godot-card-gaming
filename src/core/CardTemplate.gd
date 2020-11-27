@@ -680,6 +680,10 @@ func move_to(targetHost: Node2D,
 #		# We make to sure to clear the viewport focus because
 #		# the mouse exited signal will not fire after drag&drop in a container
 #		cfc.NMAP.main.unfocus()
+	# We need change card group to target_group
+	# TODO: We should not change the group of the card, if the replacement is not successful
+	change_owning_container(targetHost.get_card_group_name())
+
 	# We need to store the parent, because we won't be able to know it later
 	var parentHost = get_parent()
 	# We want to keep the token drawer closed during movement
@@ -1894,12 +1898,13 @@ func _execute_scripts() -> void:
 		scripting_engine._running_scripts = state_scripts
 		scripting_engine.run_next_script()
 
+# change card group
 func change_owning_container(_group_name=null):
-	var built_in_group = ["idle_process","idle_process_internal","physics_process","physics_process_internal",]
-	print(get_groups())
+	# TODO: You should not get mutually_exclusive_groups directly, you should generate it in some way
+	# Mutually exclusive card groups
+	var mutually_exclusive_groups = ["board_card","hand_card","deck_card","discard_card",]
 	for group_name in get_groups():
-		if not (group_name in built_in_group):
+		if (group_name in mutually_exclusive_groups):
 			remove_from_group(group_name)
 	if _group_name:
 		add_to_group(_group_name)
-	print(_group_name)
