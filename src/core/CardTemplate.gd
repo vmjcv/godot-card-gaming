@@ -1891,7 +1891,7 @@ func _execute_scripts() -> void:
 				state_scripts = card_scripts.get("hand", [])
 			IN_POPUP,FOCUSED_IN_POPUP:
 				state_scripts = card_scripts.get("pile", [])
-		scripting_engine.running_scripts = state_scripts
+		scripting_engine._running_scripts = state_scripts
 		scripting_engine.run_next_script()
 
 func change_owning_container(_group_name=null):
