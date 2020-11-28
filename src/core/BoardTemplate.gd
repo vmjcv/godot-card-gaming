@@ -69,17 +69,17 @@ func get_all_cards(must_child:=true,must_direct=false) -> Array:
 
 # Returns an int with the amount of children nodes which are of Card class
 func get_card_count() -> int:
-	return len(get_all_cards())
+	return len(get_all_cards(true,true))
 
 
 # Returns a card object of the card in the specified index among all cards.
 func get_card(idx: int) -> Card:
-	return get_all_cards()[idx]
+	return get_all_cards(true,true)[idx]
 
 
 # Returns an int of the index of the card object requested
 func get_card_index(card: Card) -> int:
-	return get_all_cards().find(card)
+	return get_all_cards(true,true).find(card)
 
 # Get container name
 func get_container_name():
