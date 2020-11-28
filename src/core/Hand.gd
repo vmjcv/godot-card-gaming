@@ -54,3 +54,8 @@ func draw_card(pile : Pile = cfc.NMAP.deck) -> Card:
 	if card and get_card_count() < hand_size: # prevent from exceeding our hand size
 		card.move_to(self)
 	return card
+
+
+# Get container name
+func get_container_name():
+	return "hand"

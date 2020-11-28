@@ -121,13 +121,20 @@ func get_class():
 
 
 # Returns an array with all children nodes which are of Card class
-func get_all_cards() -> Array:
-	var cardsArray := []
-	for obj in get_children():
-		# This comparison will return null if obj is not a Card class.
-		if obj as Card:
-			cardsArray.append(obj)
-	return cardsArray
+func get_all_cards(must_child:=true,must_direct=false) -> Array:
+	var all_card = get_tree().get_nodes_in_group(get_card_group_name())
+	if not must_child:
+		return all_card
+	var new_all_card = []
+	if must_direct:
+		for card in all_card:
+			if card.get_parent()==self:
+				new_all_card.append(card)
+		return new_all_card
+	for card in all_card:
+		if is_a_parent_of(card):
+			new_all_card.append(card)
+	return new_all_card
 
 
 # Returns an int with the amount of children nodes which are of Card class
@@ -184,3 +191,11 @@ func translate_card_index_to_node_index(index: int) -> int:
 		var card_at_index = all_cards[index]
 		node_index = card_at_index.get_index()
 	return node_index
+
+# Get container name
+func get_container_name():
+	return "base_card_container"
+
+# Get the card group name
+func get_card_group_name():
+	return "%s_card" % [get_container_name()]

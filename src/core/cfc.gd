@@ -140,6 +140,8 @@ var piles: Array
 var hands: Array
 # The card actively being dragged
 var card_drag_ongoing: Card = null
+# All card group name
+var card_groups_name: Array
 
 # Game random number generator
 var game_rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -152,6 +154,7 @@ func _ready() -> void:
 	piles = []
 	hands = []
 	card_drag_ongoing = null
+	card_groups_name = []
 	# The below takes care that we adjust some settings when testing via Gut
 	if get_tree().get_root().has_node('Gut'):
 		UT = true
@@ -161,6 +164,7 @@ func _ready() -> void:
 		for node in NODES_MAP.keys():
 			NMAP[node]  = get_node('/root/Main/ViewportContainer/Viewport/'
 					+ NODES_MAP[node])
+			card_groups_name.append(NMAP[node].get_card_group_name())
 		NMAP['main'] = get_node('/root/Main')
 		# When Unite Testing, we want to always have both scaling options possible
 		if UT:
