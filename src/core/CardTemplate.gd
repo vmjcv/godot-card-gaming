@@ -1902,7 +1902,7 @@ func _execute_scripts() -> void:
 func change_owning_container(_group_name=null):
 	# TODO: You should not get mutually_exclusive_groups directly, you should generate it in some way
 	# Mutually exclusive card groups
-	var mutually_exclusive_groups = ["board_card","hand_card","deck_card","discard_card",]
+	var mutually_exclusive_groups = cfc.card_groups_name
 	for group_name in get_groups():
 		if (group_name in mutually_exclusive_groups):
 			remove_from_group(group_name)
