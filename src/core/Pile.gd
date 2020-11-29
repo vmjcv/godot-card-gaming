@@ -62,7 +62,7 @@ func _on_ViewPopup_popup_hide() -> void:
 			Tween.TRANS_EXPO, Tween.EASE_OUT)
 	$ViewPopup/Tween.start()
 	yield($ViewPopup/Tween, "tween_all_completed")
-	for card in get_all_cards():
+	for card in get_all_cards(true,false):
 		# For each card we have hosted, we check if it's hosted in the popup.
 		# If it is, we move it to the root.
 		if "CardPopUpSlot" in card.get_parent().name:
@@ -98,7 +98,7 @@ func add_child(node, _legible_unique_name=false) -> void:
 		_slot_card_into_popup(node)
 
 func reorganize_stack() -> void:
-	for c in get_all_cards():
+	for c in get_all_cards(true,false):
 		if c.position != Vector2(0.5 * get_card_index(c),
 				-1 * get_card_index(c)):
 			c.position = Vector2(0.5 * get_card_index(c),
@@ -121,7 +121,7 @@ func get_top_card() -> Card:
 		# Counter intuitively, the "top" card in the pile
 		# is the last node in the node hierarchy, so
 		# to retrieve the last card placed, we choose the last index
-		card = get_all_cards().back()
+		card = get_all_cards(true,false).back()
 	return card # Returning the card object for unit testing
 
 

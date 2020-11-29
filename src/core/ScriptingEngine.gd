@@ -160,6 +160,7 @@ func spawn_card(script: CardScript) -> void:
 	var board_position: Vector2 = script.get("board_position")
 	var card: Card = load(card_scene).instance()
 	cfc.NMAP.board.add_child(card)
+	card.change_owning_container(cfc.NMAP.board.get_card_group_name())
 	card.position = board_position
 	card.state = card.ON_PLAY_BOARD
 

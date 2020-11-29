@@ -121,7 +121,7 @@ func get_class():
 
 
 # Returns an array with all children nodes which are of Card class
-func get_all_cards(must_child:=true,must_direct=false) -> Array:
+func get_all_cards(must_child:=true,must_direct=true) -> Array:
 	var all_card = get_tree().get_nodes_in_group(get_card_group_name())
 	if not must_child:
 		return all_card
@@ -139,17 +139,17 @@ func get_all_cards(must_child:=true,must_direct=false) -> Array:
 
 # Returns an int with the amount of children nodes which are of Card class
 func get_card_count() -> int:
-	return len(get_all_cards(true,true))
+	return len(get_all_cards())
 
 
 # Returns a card object of the card in the specified index among all cards.
 func get_card(idx: int) -> Card:
-	return get_all_cards(true,true)[idx]
+	return get_all_cards()[idx]
 
 
 # Returns an int of the index of the card object requested
 func get_card_index(card: Card) -> int:
-	return get_all_cards(true,true).find(card)
+	return get_all_cards().find(card)
 
 
 # Returns a random card object among the children nodes
@@ -157,14 +157,14 @@ func get_random_card() -> Card:
 	if get_card_count() == 0:
 		return null
 	else:
-		var cardsArray := get_all_cards(true,true)
+		var cardsArray := get_all_cards()
 		return cardsArray[CardFrameworkUtils.randi() % len(cardsArray)]
 
 
 # Randomly rearranges the order of the Card nodes.
 func shuffle_cards() -> void:
 	var cardsArray := []
-	for card in get_all_cards(true,true):
+	for card in get_all_cards():
 		cardsArray.append(card)
 	CardFrameworkUtils.shuffle_array(cardsArray)
 	for card in cardsArray:
@@ -177,7 +177,7 @@ func shuffle_cards() -> void:
 func translate_card_index_to_node_index(index: int) -> int:
 	var node_index := 0
 	# To figure out the index, we use the existing cards
-	var all_cards := get_all_cards(true,true)
+	var all_cards := get_all_cards()
 	# First we check if the requested index is higher than the amount of cards
 	# If so, we give back the next available index
 	if index > len(all_cards):
