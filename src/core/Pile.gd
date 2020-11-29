@@ -115,7 +115,7 @@ func move_child(child_node, to_position) -> void:
 # Return the top a Card object from the pile.
 func get_top_card() -> Card:
 	var card: Card = null
-	# prevent from trying to retrieve more cards
+	# prevents from trying to retrieve more cards
 	# than are in our deck and crashing godot.
 	if get_card_count():
 		# Counter intuitively, the "top" card in the pile
@@ -128,7 +128,7 @@ func get_top_card() -> Card:
 # Teturn the bottom Card object from the pile.
 func get_bottom_card() -> Card:
 	var card: Card = null
-	# prevent from trying to retrieve more cards
+	# prevents from trying to retrieve more cards
 	# than are in our deck and crashing godot.
 	if get_card_count():
 		# Counter intuitively, the "bottom" card in the pile
