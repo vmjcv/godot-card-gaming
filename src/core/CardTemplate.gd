@@ -139,6 +139,7 @@ var _fancy_move_second_part := false
 # We use this to track multiple cards
 # when our card is about to drop onto or target them
 var _potential_cards := []
+var _potential_containers := []
 # Used for looping between brighness scales for the Cardback glow
 # The multipliers have to be small, as even small changes increase
 # brightness a lot
@@ -249,7 +250,7 @@ func _process(delta) -> void:
 		_draw_targeting_arrow()
 	_process_card_state()
 	# Having to do all these checks due to godotengine/godot#16854
-	if cfc.debug and not get_parent() in cfc.piles:
+	if cfc._debug and not get_parent() in cfc.piles:
 		var stateslist = [
 			"IN_HAND",
 			"FOCUSED_IN_HAND",
@@ -360,16 +361,12 @@ func _on_Card_gui_input(event) -> void:
 				DRAGGED:
 					# if the card was being dragged, it's index is very high
 					# to always draw above other objects
-					# We need to reset it either to the default of 0
-					# Or if the card was left overlapping with other cards,
-					# the higher index among them
+					# We need to reset it to the default of 0
 					z_index = 0
 					var destination = cfc.NMAP.board
-					for obj in get_overlapping_areas():
-						if obj.get_class() == 'CardContainer':
-							#TODO: Need some more player-obvious logic on
-							# what to do if card area overlaps two CardContainers
-							destination = obj
+					if not _potential_containers.empty():
+						destination = _potential_containers.back()
+						_potential_containers.back().set_highlight(false)
 					move_to(destination)
 					_focus_completed = false
 					#emit_signal("card_dropped",self)
@@ -485,7 +482,13 @@ func _on_Card_area_entered(area: Area2D) -> void:
 			# Finally we use a method which  handles changing highlights on the
 			# top index card
 			highlight_potential_card(cfc.HOST_HOVER_COLOUR)
-
+	if area.get_class() == "CardContainer" \
+			and not area in _potential_containers \
+			and state == DRAGGED:
+		var container = area
+		_potential_containers.append(container)
+		_potential_containers.sort_custom(CardFrameworkUtils,"sort_card_containers")
+		highlight_potential_container(cfc.TARGET_HOVER_COLOUR)
 
 
 # Triggers when a card stops hovering over another
@@ -507,6 +510,13 @@ func _on_Card_area_exited(area: Area2D) -> void:
 			card.set_highlight(false)
 			# Finally, we make sure we highlight any other cards we're still hovering
 			highlight_potential_card(cfc.HOST_HOVER_COLOUR)
+	if area.get_class() == "CardContainer" \
+			and area in _potential_containers \
+			and state == DRAGGED:
+		var container = area
+		_potential_containers.erase(container)
+		container.set_highlight(false)
+		highlight_potential_container(cfc.TARGET_HOVER_COLOUR)
 
 
 # Triggers when a targetting arrow hovers over another card while being dragged
@@ -1300,6 +1310,18 @@ func highlight_potential_card(colour : Color) -> void:
 			_potential_cards[idx].set_highlight(false)
 
 
+# Goes through all the potential cards we're currently hovering onto with a card
+# or targetting arrow, and highlights the one with the highest index among
+# their common parent.
+# It also colours the highlight with the provided colour
+func highlight_potential_container(colour : Color) -> void:
+	for idx in range(0,len(_potential_containers)):
+		if idx == len(_potential_containers) - 1:
+			_potential_containers[idx].set_highlight(true,colour)
+		else:
+			_potential_containers[idx].set_highlight(false)
+
+
 # Will generate a targeting arrow on the card which will follow the mouse cursor.
 # The top card hovered over by the mouse cursor will be highlighted
 # and will become the target when complete_targeting() is called
@@ -1384,6 +1406,50 @@ func recalculate_position(index_diff = null) -> Vector2:
 	if cfc.hand_use_oval_shape:
 		return _recalculate_position_use_oval(index_diff)
 	return _recalculate_position_use_rectangle(index_diff)
+
+# Animates a card semi-randomly to make it looks like it's being shuffled
+# Then it returns it to its original location
+func animate_shuffle(anim_speed : float, style : int) -> void:
+	var starting_card_position = position
+	var csize : Vector2
+	var random_x : float
+	var random_y : float
+	var random_rot : float
+	var center_card_pop_position = starting_card_position+Vector2(random_x,random_y)
+	var start_pos_anim
+	var end_pos_anim
+	var rot_anim
+	var pos_speed := anim_speed
+	var rot_speed := anim_speed
+	if style == cfc.SHUFFLE_STYLE.corgi:
+		csize = $Control.rect_size * 0.65
+		random_x = CardFrameworkUtils.randf_range(- csize.x, csize.x)
+		random_y = CardFrameworkUtils.randf_range(- csize.y, csize.y)
+		random_rot = CardFrameworkUtils.randf_range(-20, 20)
+		center_card_pop_position = starting_card_position+Vector2(random_x,random_y)
+		start_pos_anim = Tween.TRANS_CIRC
+		end_pos_anim = Tween.TRANS_CIRC
+		rot_anim = Tween.TRANS_CIRC
+	# 2 is splash
+	elif style == cfc.SHUFFLE_STYLE.splash:
+		csize = $Control.rect_size * 0.85
+		random_x = CardFrameworkUtils.randf_range(- csize.x, csize.x)
+		random_y = CardFrameworkUtils.randf_range(- csize.y, csize.y)
+		random_rot = CardFrameworkUtils.randf_range(-180, 180)
+		center_card_pop_position = starting_card_position+Vector2(random_x,random_y)
+		start_pos_anim = Tween.TRANS_ELASTIC
+		end_pos_anim = Tween.TRANS_QUAD
+		rot_anim = Tween.TRANS_CIRC
+		pos_speed = pos_speed
+	_add_tween_position(starting_card_position,center_card_pop_position,
+			pos_speed,start_pos_anim,Tween.EASE_OUT)
+	_add_tween_rotation(0,random_rot,rot_speed,rot_anim,Tween.EASE_OUT)
+	_tween.start()
+	yield(_tween, "tween_all_completed")
+	_add_tween_position(center_card_pop_position,starting_card_position,
+			pos_speed,end_pos_anim,Tween.EASE_IN)
+	_add_tween_rotation(random_rot,0,rot_speed,rot_anim,Tween.EASE_IN)
+	_tween.start()
 
 
 # Makes attachments always move with their parent around the board
@@ -1669,7 +1735,8 @@ func _draw_targeting_arrow() -> void:
 	$TargetLine.clear_points()
 	# The final position is the mouse position,
 	# but we offset it by the position of the card center on the map
-	var final_point =  cfc.NMAP.board.mouse_pointer.determine_global_mouse_pos() - (position + $Control.rect_size/2)
+	var final_point =  cfc.NMAP.board.mouse_pointer.determine_global_mouse_pos() \
+			- (position + $Control.rect_size/2)
 	var curve = Curve2D.new()
 #		var middle_point = centerpos + (get_global_mouse_position() - centerpos)/2
 #		var middle_dir_to_vpcenter = middle_point.direction_to(get_viewport().size/2)
@@ -2263,7 +2330,7 @@ func _recalculate_position_use_oval(index_diff = null)-> Vector2:
 	var card_position_x: float = 0.0
 	var card_position_y: float = 0.0
 	var parent_control = get_parent().get_node('Control')
-	# Oval hor rad, rect_size.x*0.5*1.5 it’s an empirical formula, 
+	# Oval hor rad, rect_size.x*0.5*1.5 it’s an empirical formula,
 	# that's been tested to feel good.
 	var hor_rad: float = parent_control.rect_size.x * 0.5 * 1.5
 	# Oval ver rad, rect_size.y * 1.5 it’s an empirical formula,
@@ -2275,12 +2342,12 @@ func _recalculate_position_use_oval(index_diff = null)-> Vector2:
 	# Get the direction vector of a point on the oval
 	var oval_angle_vector = Vector2(hor_rad * cos(rad_angle),
 			- ver_rad * sin(rad_angle))
-	# Take the center point of the card as the starting point, the coordinates 
+	# Take the center point of the card as the starting point, the coordinates
 	# of the top left corner of the card
 	var left_top = Vector2(- $Control.rect_size.x/2, - $Control.rect_size.y/2)
 	# Place the top center of the card on the oval point
 	var center_top = Vector2(0, - $Control.rect_size.y/2)
-	# Get the angle of the card, which is different from the oval angle, 
+	# Get the angle of the card, which is different from the oval angle,
 	# the card angle is the normal angle of a certain point
 	var card_angle = _get_oval_angle_by_index(angle, null, hor_rad,ver_rad)
 	# Displacement offset due to card rotation

@@ -9,11 +9,23 @@ extends Node
 # * VIEWPORT means that a larger version of the card appears when mousing over it
 # * BOTH means SCALED + VIEWPORT
 enum FocusStyle {
-	SCALED					#0
-	VIEWPORT				#1
-	BOTH					#2
+	SCALED
+	VIEWPORT
+	BOTH
 }
-
+# Options for pile shuffle styles.
+# * corgi: Looks better on a medium amount of cards (0 to 30)
+# * splash: Looks better on a larger amount of cards (30+)
+# * auto: Will choose a shuffle animation depending on the amount of
+#	cards in the pile
+# * random: Will choose a random shuffle style each time a shuffle is requested.
+# * none: No shuffle animation for this pile.
+enum SHUFFLE_STYLE {
+	auto,
+	none,
+	random,
+	corgi,
+	splash }
 
 
 #-----------------------------------------------------------------------------
@@ -137,12 +149,17 @@ var game_rng_seed := "CFC Random Seed" setget set_seed
 # If set to false, the hand will be presented with all cards
 # horizontally aligned
 var hand_use_oval_shape := true
+
+
+
 #-----------------------------------------------------------------------------
 # END Behaviour Constants
 #-----------------------------------------------------------------------------
 
 # This will store all card properties which are placed in the card labels
 var card_definitions := {}
+# This will store all card scripts
+var set_scripts := {}
 # A class to propagate script triggers to all cards.
 var signal_propagator = SignalPropagator.new()
 # Unit Testing flag
@@ -155,7 +172,8 @@ var piles: Array
 var hands: Array
 # The card actively being dragged
 var card_drag_ongoing: Card = null
-var debug := false
+# Switch used for seeing debug info
+var _debug := false
 # Game random number generator
 var game_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
@@ -171,7 +189,7 @@ func _ready() -> void:
 	# The below takes care that we adjust some settings when testing via Gut
 	if get_tree().get_root().has_node('Gut'):
 		UT = true
-		debug = true
+		_debug = true
 	# The below code allows us to quickly refer to nodes meant to host cards
 	# (i.e. parents) using an human-readable name
 	if get_tree().get_root().has_node('Main'):
@@ -200,7 +218,8 @@ func _ready() -> void:
 		hands.append(NMAP[name])
 	# Initialize the game random seed
 	set_seed(game_rng_seed)
-	card_definitions = CardFrameworkUtils.load_card_definitions()
+	card_definitions = load_card_definitions()
+	set_scripts = load_script_definitions()
 
 
 
@@ -219,6 +238,34 @@ func instance_card(card_name: String) -> Card:
 	var card = template.instance()
 	card.setup(card_name)
 	return(card)
+
+# Returns the combined Card definitions of all set files
+func load_card_definitions() -> Dictionary:
+	var set_definitions := CardFrameworkUtils.list_files_in_directory(
+				"res://src/custom/cards/sets/", "SetDefinition_")
+	var combined_sets := {}
+	for set_file in set_definitions:
+		var set_dict = load("res://src/custom/cards/sets/" + set_file).CARDS
+		for dict_entry in set_dict:
+			combined_sets[dict_entry] = set_dict[dict_entry]
+	return(combined_sets)
+
+
+# Seeks in the script definitions of all sets, and returns the script for
+# the requested card
+func load_script_definitions() -> Dictionary:
+	var script_definitions := CardFrameworkUtils.list_files_in_directory(
+				"res://src/custom/cards/sets/", "SetScripts_")
+	var combined_scripts := {}
+	for card_name in card_definitions.keys():
+		for script_file in script_definitions:
+			if combined_scripts.get(card_name):
+				break
+			var scripts_obj = load("res://src/custom/cards/sets/" + script_file).new()
+			var card_script = scripts_obj.get_scripts(card_name)
+			if not card_script.empty():
+				combined_scripts[card_name] = card_script
+	return(combined_scripts)
 
 # The SignalPropagator is responsible for collecting all card signals
 # and asking all cards to check if there's any automation they need to perform

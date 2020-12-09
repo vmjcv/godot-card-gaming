@@ -13,26 +13,17 @@ func _ready() -> void:
 	# This way any they will work with any size of viewport in a game.
 	# Discard pile goes bottom right
 
-	$DiscardPile.init_position = Vector2(get_viewport().size.x
+	$DiscardPile.position = Vector2(get_viewport().size.x
 			- $DiscardPile/Control.rect_size.x - 10,get_viewport().size.y
 			- $DiscardPile/Control.rect_size.y)
-	$DiscardPile.shuffle_position = Vector2(get_viewport().size.x * 0.75
-			- $DiscardPile/Control.rect_size.x - 10,get_viewport().size.y * 0.5
-			- $DiscardPile/Control.rect_size.y)
-	$DiscardPile.shuffle_rotation = -10
-	$DiscardPile.position = $DiscardPile.init_position
 	# Deck goes bottom left
-
-	$Deck.init_position = Vector2(0,get_viewport().size.y
+	$Deck.position = Vector2(0,get_viewport().size.y
 			- $Deck/Control.rect_size.y)
-	$Deck.shuffle_position = Vector2(get_viewport().size.x * 0.25,get_viewport().size.y*0.5
-			- $Deck/Control.rect_size.y)
-	$Deck.shuffle_rotation = 10
-	$Deck.position = $Deck.init_position
 	# Hand goes in the middle of the two
 	$Hand.position = Vector2(150,get_viewport().size.y
 			- $Hand/Control.rect_size.y + $Hand.bottom_margin)
 	$FancyMovementToggle.pressed = cfc.fancy_movement
+	$OvalHandToggle.pressed = cfc.hand_use_oval_shape
 	$ScalingFocusOptions.selected = cfc.focus_style
 	# Fill up the deck for demo purposes
 	if not get_tree().get_root().has_node('Gut'):
@@ -52,13 +43,18 @@ func _on_OvalHandToggle_toggled(_button_pressed: bool) -> void:
 	for c in cfc.NMAP.hand.get_all_cards():
 		c.reorganizeSelf()
 
+
 # Reshuffles all Card objects created back into the deck
 func _on_ReshuffleAll_pressed() -> void:
 	for c in get_tree().get_nodes_in_group("cards"):
 		if c.get_parent() != cfc.NMAP.deck:
 			c.move_to(cfc.NMAP.deck)
 			yield(get_tree().create_timer(0.1), "timeout")
-	yield(get_tree().create_timer(1), "timeout")
+	# Last card in, is the top card of the pile
+	var last_card : Card = cfc.NMAP.deck.get_top_card()
+	if last_card._tween.is_active():
+		yield(last_card._tween, "tween_all_completed")
+	yield(get_tree().create_timer(0.2), "timeout")
 	cfc.NMAP.deck.shuffle_cards()
 
 
@@ -74,18 +70,20 @@ func _on_EnableAttach_toggled(_button_pressed: bool) -> void:
 
 
 # Loads a sample set of cards to use for testing
-func load_test_cards() -> void:
+func load_test_cards(extras := 11) -> void:
 	var test_cards := []
 	for ckey in cfc.card_definitions.keys():
 		test_cards.append(ckey)
 	var test_card_array := []
-	for _i in range(11):
+	for _i in range(extras):
 		var random_card_name = \
 				test_cards[CardFrameworkUtils.randi() % len(test_cards)]
 		test_card_array.append(cfc.instance_card(random_card_name))
+	# 11 is the cards GUT expects. It's the testing standard
+	if extras == 11:
 	# I ensure there's of each test card, for use in GUT
-	for card_name in test_cards:
-		test_card_array.append(cfc.instance_card(card_name))
+		for card_name in test_cards:
+			test_card_array.append(cfc.instance_card(card_name))
 	for card in test_card_array:
 		$Deck.add_child(card)
 		# warning-ignore:return_value_discarded

@@ -3,18 +3,18 @@
 class_name Pile
 extends  CardContainer
 
+
+# The shuffle style chosen for this pile. See cfc.SHUFFLE_STYLE documentation.
+export(cfc.SHUFFLE_STYLE) var shuffle_style = cfc.SHUFFLE_STYLE.auto
+
+
+
 # If this is set to true, cards on this stack will be placed face-up.
 # Otherwise they will be placed face-down.
 export var faceup_cards := false
-
 # Popup View button for Piles
 onready var view_button := $Control/ManipulationButtons/View
-var init_position
-# Position of the container when shuffling
-var shuffle_position
-# Angle of the container when shuffling
-var shuffle_rotation
-# Called when the node enters the scene tree for the first time.
+
 func _ready():
 	# warning-ignore:return_value_discarded
 	view_button.connect("pressed",self,'_on_View_Button_pressed')
@@ -103,12 +103,23 @@ func add_child(node, _legible_unique_name=false) -> void:
 		# we move them automatically to the viewpopup grid.
 		_slot_card_into_popup(node)
 
+
+# Rearranges the position of the contained cards slightly
+# so that they appear to be stacked on top of each other
 func reorganize_stack() -> void:
 	for c in get_all_cards():
 		if c.position != Vector2(0.5 * get_card_index(c),
-				-1 * get_card_index(c)):
+				-get_card_index(c)):
 			c.position = Vector2(0.5 * get_card_index(c),
-					-1 * get_card_index(c))
+					-get_card_index(c))
+	#The size of the panel has to be modified to be as large as the size of the cardd
+	# TODO: This logic has to be adapted depending on where on the viewport
+	# This pile is anchored. The below calculations assume bottom-left.
+	$Control.rect_size = Vector2(156 + 0.5 * get_card_count(), 246 + get_card_count())
+	$Control/Highlight.rect_size = $Control.rect_size
+	# The highlight has to also be shifted higher or else it will just extend
+	# below the viewport
+	$Control/Highlight.rect_position.y = -get_card_count()
 
 
 # Override the godot builtin move_child() method,
@@ -191,50 +202,110 @@ func _slot_card_into_popup(card: Card) -> void:
 # Randomly rearranges the order of the [Card] nodes.
 # Pile shuffling includes a fancy animation
 func shuffle_cards(animate = true) -> void:
-	if not $Tween.is_active() and animate:
-		var last_card: Card
-		# We move the pile to a more central location to see the anim
-		_add_tween_position(position,shuffle_position,0.2)
-		_add_tween_rotation(rotation_degrees,shuffle_rotation,0.2)
-		$Tween.start()
-		yield($Tween, "tween_all_completed")
-		if get_card_count() > 1:
-			var random_cards = get_all_cards().duplicate()
-			CardFrameworkUtils.shuffle_array(random_cards)
-			last_card = random_cards.back()
-			for card in random_cards:
-				_anim_shuffle_card(card)
-				yield(get_tree().create_timer(0.05), "timeout")
-		# This is where the shuffle actually happens
-		# The effect looks like the cards shuffle in the middle of their
-		# animations
-		.shuffle_cards()
-		yield(last_card._tween, "tween_all_completed")
-		_add_tween_position(position,init_position,0.2)
-		_add_tween_rotation(rotation_degrees,0,0.2)
-		$Tween.start()
-		yield($Tween, "tween_all_completed")
+	# Normally the cfc.SHUFFLE_STYLE enum should be defined in this class
+	# but if we did so, we would not be able to refer to it from the Card
+	# class, as that would cause a cyclic dependency on the parser
+	# So we've placed it in cfc instead.
+	if not $Tween.is_active() \
+			and animate and shuffle_style != cfc.SHUFFLE_STYLE.none:
+		# The placement of this container in respect to the board.
+		var init_position = position
+		# The following calculation figures out the direction
+		# towards the center of the viewport from the center of the card
+		var shuffle_direction = (position + $Control.rect_size/2)\
+				.direction_to(get_viewport().size / 2)
+		# We increase the intensity of the y direction, to make the shuffle
+		# position move higher up or down respective to its position.
+		shuffle_direction.y *= 2
+		# Position of the container when shuffling. This is just the default
+		# It can be overriden in each shuffle definition
+		var shuffle_position = position + shuffle_direction * 300
+		# Angle of the container when shuffling
+		# The below calculation will be 10 if the card is on the left
+		# or 10 if the card is on the right of the viewport center.
+		var shuffle_rotation = (shuffle_position.x - position.x) \
+				/ abs(shuffle_position.x - position.x) * 10
+		# To make sure the shuffle draws above other objects
+		z_index = 50
+		# Handles how fast cards start animating after another.
+		# If not used, all cards animate at the same time (e.g. see splash)
+		var next_card_speed: float
+		# How fast the tween animating the cards will go.
+		var anim_speed: float
+		var style: int
+		var card_count = get_card_count()
+		# If the style is auto, we've predefined some animations that fit
+		# The amount of cards in the deck
+		if shuffle_style == cfc.SHUFFLE_STYLE.auto:
+			if card_count <= 30:
+				style = cfc.SHUFFLE_STYLE.corgi
+			else:
+				style = cfc.SHUFFLE_STYLE.splash
+		# if the style is random, we select a random shuffle animation among
+		# the predefined ones.
+		elif shuffle_style == cfc.SHUFFLE_STYLE.random:
+			style = CardFrameworkUtils.randi_range(3, len(cfc.SHUFFLE_STYLE) - 1)
+		else:
+			style = shuffle_style
+		if style == cfc.SHUFFLE_STYLE.corgi:
+			_add_tween_position(position,shuffle_position,0.2)
+			_add_tween_rotation(rotation_degrees,shuffle_rotation,0.2)
+			$Tween.start()
+			# We move the pile to a more central location to see the anim
+			yield($Tween, "tween_all_completed")
+			# The animation speeds have been empirically tested to look good
+			next_card_speed = 0.05 - 0.002 * card_count
+			if next_card_speed < 0.01:
+				next_card_speed = 0.01
+			anim_speed = 0.4 - 0.005 * card_count
+			if anim_speed < 0.05:
+				anim_speed = 0.05
+			if card_count > 1:
+				var random_cards = get_all_cards().duplicate()
+				CardFrameworkUtils.shuffle_array(random_cards)
+				for card in random_cards:
+					card.animate_shuffle(anim_speed,cfc.SHUFFLE_STYLE.corgi)
+					yield(get_tree().create_timer(next_card_speed), "timeout")
+			# This is where the shuffle actually happens
+			# The effect looks like the cards shuffle in the middle of their
+			# animations
+			.shuffle_cards()
+			# This wait gives the carde enough time to return to
+			# their original position.
+			yield(get_tree().create_timer(anim_speed * 2.5), "timeout")
+		elif style == cfc.SHUFFLE_STYLE.splash:
+			_add_tween_position(position,shuffle_position,0.2)
+			_add_tween_rotation(rotation_degrees,shuffle_rotation,0.2)
+			$Tween.start()
+			# We move the pile to a more central location to see the anim
+			yield($Tween, "tween_all_completed")
+			# The animation speeds have been empirically tested to look good
+			anim_speed = 0.6
+			if anim_speed < 0.05:
+				anim_speed = 0.05
+			if get_card_count() > 1:
+				var random_cards = get_all_cards().duplicate()
+				CardFrameworkUtils.shuffle_array(random_cards)
+				for card in random_cards:
+					card.animate_shuffle(anim_speed, cfc.SHUFFLE_STYLE.splash)
+			# This has been timed to "splash" the cards at the exact moment
+			# The shuffle happens, which makes the z-index change
+			# invisible
+			yield(get_tree().create_timer(anim_speed - 0.5), "timeout")
+			.shuffle_cards()
+			# The extra time is to give the cards enough time to return
+			# To the starting location, and let reorganize_stack() do its magic
+			yield(get_tree().create_timer(anim_speed + 0.6), "timeout")
+		if position != init_position:
+			_add_tween_position(position,init_position,0.2)
+			_add_tween_rotation(rotation_degrees,0,0.2)
+			$Tween.start()
+		z_index = 0
 	else:
 		# if we're already running another animation, just shuffle
 		.shuffle_cards()
 	reorganize_stack()
 
-# Animates a card semi-randomly to make it looks like it's being shuffled
-# Then it returns it to its original location
-func _anim_shuffle_card(card: Card) -> void:
-	var starting_card_position = card.position
-	var csize = card.get_node("Control").rect_size * 0.65
-	var random_x = CardFrameworkUtils.randf_range(- csize.x, csize.x)
-	var random_y = CardFrameworkUtils.randf_range(- csize.y, csize.y)
-	var random_rot = CardFrameworkUtils.randf_range(-20, 20)
-	var center_card_pop_position = starting_card_position+Vector2(random_x,random_y)
-	card._add_tween_position(starting_card_position,center_card_pop_position,0.2)
-	card._add_tween_rotation(0,random_rot,0.2)
-	card._tween.start()
-	yield(card._tween, "tween_all_completed")
-	card._add_tween_position(center_card_pop_position,starting_card_position,0.2)
-	card._add_tween_rotation(random_rot,0,0.2)
-	card._tween.start()
 
 # Card rotation animation
 func _add_tween_rotation(
