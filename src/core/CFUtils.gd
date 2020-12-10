@@ -1,11 +1,14 @@
 # Card Gaming Framework Utilities
 #
 # This is a library of static functions.
-class_name CardFrameworkUtils
+class_name CFUtils
 extends Reference
 
-const _CARD_OPTIONAL_CONFIRM = \
-		preload("res://src/core/OptionalConfirmation.tscn")
+# The path to the optional confirm scene. This has to be defined explicitly
+# here, in order to use it in its preload, otherwise the parser gives an error
+const _PATH_OPTIONAL_CONFIRM = CFConst.PATH_CORE + "OptionalConfirmation.tscn"
+const _OPTIONAL_CONFIRM = preload(_PATH_OPTIONAL_CONFIRM)
+
 
 # Randomize array through our own seed
 static func shuffle_array(array: Array) -> void:
@@ -16,7 +19,7 @@ static func shuffle_array(array: Array) -> void:
 	var tmp
 	for i in range(n-1,1,-1):
 		# Because there is a problem with the calling sequence of static classes,
-		# if you call randi directly, you will not call CardFrameworkUtils.randi
+		# if you call randi directly, you will not call CFUtils.randi
 		# but call math.randi, so we call cfc.game_rng.randi() directly
 		j = cfc.game_rng.randi()%(i+1)
 		tmp = array[j]
@@ -69,13 +72,6 @@ static func list_files_in_directory(path: String, prepend_needed := "") -> Array
 	dir.list_dir_end()
 	return files
 
-# Seeks in the script definitions of all sets, and returns the script for
-# the requested card
-static func find_card_script(card_name, trigger) -> Dictionary:
-	var card_script : Dictionary = cfc.set_scripts.get(card_name,{})
-	var trigger_script : Dictionary = card_script.get(trigger,{})
-	return(trigger_script)
-
 
 # Creates a ConfirmationDialog for the player to approve the
 # Use of an optional script or task.
@@ -86,7 +82,7 @@ static func confirm(
 		type := "task") -> bool:
 	var is_accepted := true
 	if script.get(SP.KEY_IS_OPTIONAL + type):
-		var confirm = _CARD_OPTIONAL_CONFIRM.instance()
+		var confirm = _OPTIONAL_CONFIRM.instance()
 		confirm.prep(card_name,task_name)
 		# We have to wait until the player has finished selecting an option
 		yield(confirm,"selected")
@@ -106,6 +102,7 @@ static func sort_index_ascending(c1, c2) -> bool:
 	if c1.get_my_card_index() < c2.get_my_card_index():
 		return true
 	return false
+
 
 # Used with sort_custom to find the highest child index among multiple cards
 static func sort_card_containers(c1, c2) -> bool:

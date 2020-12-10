@@ -1,8 +1,10 @@
 class_name UTCommon
 extends "res://addons/gut/test.gd"
 
-const MAIN_SCENE = preload("res://src/core/Main.tscn")
-const BOARD_SCENE = preload("res://src/custom/Board.tscn")
+const MAIN_SCENE_FILE = CFConst.PATH_CORE + "Main.tscn"
+const MAIN_SCENE = preload(MAIN_SCENE_FILE)
+const BOARD_SCENE_FILE = CFConst.PATH_CUSTOM + "Board.tscn"
+var BOARD_SCENE = load(BOARD_SCENE_FILE)
 const MOUSE_SPEED := {
 	"fast": [10,0.3],
 	"slow": [3,0.6],
