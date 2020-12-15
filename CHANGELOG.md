@@ -1,7 +1,15 @@
 # Changelog
 
+## 1.1 (Ongoing)
 
-## 0.13 (Ongoing)
+### Tweaks
+
+* Synchronized card focus animations
+
+
+## 1.0
+
+First stable release is here! We will attempt to not break (too much) existing names and calls from this point on.
 
 ### New Features
 
