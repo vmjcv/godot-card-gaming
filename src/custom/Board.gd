@@ -10,9 +10,6 @@ func _ready() -> void:
 	# instead of defining them on the scene.
 	# This way any they will work with any size of viewport in a game.
 	# Discard pile goes bottom right
-	$FancyMovementToggle.pressed = cfc.fancy_movement
-	$OvalHandToggle.pressed = cfc.hand_use_oval_shape
-	$ScalingFocusOptions.selected = cfc.focus_style
 	$Debug.pressed = cfc._debug
 	# Fill up the deck for demo purposes
 	if not get_tree().get_root().has_node('Gut'):
@@ -20,28 +17,6 @@ func _ready() -> void:
 	for container in get_tree().get_nodes_in_group("card_containers"):
 		container.re_place()
 
-
-# This function is to avoid relating the logic in the card objects
-# to a node which might not be there in another game
-# You can remove this function and the FancyMovementToggle button
-# without issues
-func _on_FancyMovementToggle_toggled(_button_pressed) -> void:
-	cfc.fancy_movement = $FancyMovementToggle.pressed
-
-
-func _on_OvalHandToggle_toggled(_button_pressed: bool) -> void:
-	cfc.hand_use_oval_shape = $OvalHandToggle.pressed
-	for c in cfc.NMAP.hand.get_all_cards():
-		c.reorganize_self()
-
-
-# Reshuffles all Card objects created back into the deck
-func _on_ReshuffleAllDeck_pressed() -> void:
-	reshuffle_all_in_pile(cfc.NMAP.deck)
-
-
-func _on_ReshuffleAllDiscard_pressed() -> void:
-	reshuffle_all_in_pile(cfc.NMAP.discard)
 
 func reshuffle_all_in_pile(pile = cfc.NMAP.deck):
 	for c in get_tree().get_nodes_in_group("cards"):
@@ -54,17 +29,6 @@ func reshuffle_all_in_pile(pile = cfc.NMAP.deck):
 		yield(last_card._tween, "tween_all_completed")
 	yield(get_tree().create_timer(0.2), "timeout")
 	pile.shuffle_cards()
-
-
-# Button to change focus mode
-func _on_ScalingFocusOptions_item_selected(index) -> void:
-	cfc.focus_style = index
-
-
-# Button to make all cards act as attachments
-func _on_EnableAttach_toggled(button_pressed: bool) -> void:
-	for c in allCards:
-		c.is_attachment = button_pressed
 
 
 func _on_Debug_toggled(button_pressed: bool) -> void:

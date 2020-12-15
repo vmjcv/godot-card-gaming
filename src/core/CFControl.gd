@@ -85,8 +85,6 @@ func _ready() -> void:
 		focus_style = CFConst.FocusStyle.SCALED
 		# To prevent accidental switching this option when there's no other
 		# viewports active
-		if NMAP.board: # Needed for UT
-			NMAP.board.get_node("ScalingFocusOptions").disabled = true
 		# The below loops, populate two arrays which allows us to quickly
 		# figure out if a container is a pile or hand
 	# Initialize the game random seed
