@@ -14,6 +14,7 @@ onready var bottom_margin: float = $Control.rect_size.y * CFConst.BOTTOM_MARGIN_
 func _ready() -> void:
 	# warning-ignore:return_value_discarded
 	$Control/ManipulationButtons/DiscardRandom.connect("pressed",self,'_on_DiscardRandom_Button_pressed')
+	re_place()
 
 
 # Button which shuffles the children [Card] objects
@@ -35,6 +36,18 @@ func _on_DiscardRandom_Button_pressed() -> void:
 		card.move_to(cfc.NMAP.discard)
 
 
+# A wrapper for the CardContainer's get_last_card()
+# which make sense for the cards' index in a hand
+func get_rightmost_card() -> Card:
+	return(get_last_card())
+
+
+# A wrapper for the CardContainer's get_first_card()
+# which make sense for the cards' index in a hand
+func get_leftmost_card() -> Card:
+	return(get_first_card())
+
+
 # Visibly shuffles all cards in hand
 func shuffle_cards() -> void:
 	# When shuffling the hand, we also want to show the player
@@ -42,7 +55,7 @@ func shuffle_cards() -> void:
 	.shuffle_cards()
 	for card in get_all_cards():
 		card.interruptTweening()
-		card.reorganizeSelf()
+		card.reorganize_self()
 	move_child($Control,0)
 
 
@@ -55,3 +68,27 @@ func draw_card(pile : Pile = cfc.NMAP.deck) -> Card:
 	if card and get_card_count() < hand_size: # prevent from exceeding our hand size
 		card.move_to(self)
 	return card
+
+# Overrides the re_place() function of [CardContainer] in order
+# to also resize the hand rect, according to how many other
+# CardContainers exist in the same row/column
+func re_place() -> void:
+	var others_rect_x := 0.0
+	var others_rect_y := 0.0
+	for group in ["top","bottom", "left", "right"]:
+		if group in get_groups():
+			for other in get_tree().get_nodes_in_group(group):
+				if group in ["top", "bottom"] and other != self:
+					others_rect_x += other.control.rect_size.x
+				if group in ["left", "right"]:
+					others_rect_y += other.contro.rect_size.y
+	if "top" in get_groups() or "bottom" in get_groups():
+		$Control.rect_size.x = get_viewport().size.x - others_rect_x
+	if "left" in get_groups() or "right" in get_groups():
+		$Control.rect_size.y = get_viewport().size.y - others_rect_y
+	$CollisionShape2D.shape.extents = $Control.rect_size / 2
+	$CollisionShape2D.position = $Control.rect_size / 2
+	.re_place()
+	position.y += bottom_margin
+	for c in get_all_cards():
+		c.reorganize_self()

@@ -54,7 +54,7 @@ func test_state_executions():
 	assert_false(card.is_faceup,
 		"Target should be face-down")
 	card.is_faceup = true
-	card.state = Card.PUSHED_ASIDE
+	card.state = Card.CardState.PUSHED_ASIDE
 	card.execute_scripts()
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
@@ -63,7 +63,7 @@ func test_state_executions():
 	card.is_faceup = true
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
-	card.state = Card.FOCUSED_IN_HAND
+	card.state = Card.CardState.FOCUSED_IN_HAND
 	card.execute_scripts()
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
@@ -85,7 +85,7 @@ func test_state_executions():
 	card.is_faceup = true
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
-	card.state = Card.FOCUSED_ON_BOARD
+	card.state = Card.CardState.FOCUSED_ON_BOARD
 	card.execute_scripts()
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
 	yield(yield_to(target._flip_tween, "tween_all_completed", 0.5), YIELD)
@@ -105,7 +105,7 @@ func test_state_executions():
 			"Card should have moved to specified position")
 	card.move_to(cfc.NMAP.discard)
 	yield(yield_to(card._tween, "tween_all_completed", 1), YIELD)
-	card.state = Card.FOCUSED_IN_POPUP
+	card.state = Card.CardState.FOCUSED_IN_POPUP
 	card.execute_scripts()
 	yield(yield_to(card._tween, "tween_all_completed", 1), YIELD)
 	assert_eq(Vector2(100,100),card.global_position,
@@ -125,7 +125,7 @@ func test_subject_target():
 	var scripting_engine = card.execute_scripts()
 	yield(yield_for(0.1), YIELD)
 	if scripting_engine is GDScriptFunctionState: # Still seeking...
-		yield(card, "initiated_targeting")
+		yield(card.targeting_arrow, "initiated_targeting")
 	#watch_signals(scripting_engine)
 	yield(target_card(card,card), "completed")
 	yield(yield_to(card._tween, "tween_all_completed", 1), YIELD)
@@ -148,10 +148,12 @@ func test_subject_boardseek():
 	card.scripts = {"manual": {"hand": [
 			{"name": "rotate_card",
 			"subject": "boardseek",
+			"subject_count": "all",
 			"filter_properties_seek": {"Type": ttype},
 			"degrees": 180},
 			{"name": "rotate_card",
 			"subject": "boardseek",
+			"subject_count": "all",
 			"filter_properties_seek": {"Type": ttype2},
 			"degrees": 90}]}}
 	var scripting_engine = card.execute_scripts()
@@ -193,6 +195,7 @@ func test_subject_boardseek_previous():
 	card.scripts = {"manual": {"hand": [
 			{"name": "rotate_card",
 			"subject": "boardseek",
+			"subject_count": "all",
 			"filter_properties_seek": {"Tags": "Tag 1"},
 			"degrees": 90},
 			{"name": "flip_card",
@@ -218,6 +221,17 @@ func test_subject_tutor():
 	yield(yield_to(target._tween, "tween_all_completed", 0.5), YIELD)
 	assert_eq("Red",target.properties["Type"],
 			"Card of the correct type should be placed on the board")
+	card.scripts = {"manual": {"hand": [
+			{"name": "move_card_cont_to_board",
+			"subject": "tutor",
+			"src_container":  cfc.NMAP.deck,
+			"filter_properties_tutor": {"Name": "Multiple Choices Test Card"},
+			"board_position":  Vector2(100,200)}]}}
+	card.execute_scripts()
+	target = cfc.NMAP.board.get_card(1)
+	yield(yield_to(target._tween, "tween_all_completed", 0.5), YIELD)
+	assert_eq("Multiple Choices Test Card",target.card_name,
+			"Card of the correct name should be placed on the board")
 
 func test_subject_index():
 	target = cfc.NMAP.deck.get_card(5)

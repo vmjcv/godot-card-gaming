@@ -15,7 +15,8 @@ var _dupes_dict := {}
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	pass
+	get_viewport().connect("size_changed",self,"_on_viewport_resized")
+	$ViewportContainer.rect_size = get_viewport().size
 
 
 func _process(_delta) -> void:
@@ -52,11 +53,15 @@ func focus_card(card: Card) -> void:
 		_dupes_dict[dupe_focus] = card
 		# We display a "pure" version of the card
 		# This means we hide buttons, tokens etc
-		dupe_focus.state = dupe_focus.VIEWPORT_FOCUS
+		dupe_focus.state = Card.CardState.VIEWPORT_FOCUS
 		# We store all our previously focused cards in an array, and clean them
 		# up when they're not focused anymore
 		_previously_focused_cards.append(dupe_focus)
 		$Focus/Viewport.add_child(dupe_focus)
+		# We have to copy these internal vars because they are reset
+		# see https://github.com/godotengine/godot/issues/3393
+		dupe_focus.is_faceup = card.is_faceup
+		dupe_focus.is_viewed = card.is_viewed
 		# We make the viewport camera focus on it
 		$Focus/Viewport/Camera2D.position = dupe_focus.global_position
 		# We always make sure to clean tweening conflicts
@@ -67,6 +72,7 @@ func focus_card(card: Card) -> void:
 				Tween.TRANS_SINE, Tween.EASE_IN)
 		$Focus/Tween.start()
 
+
 # Hides the focus viewport when we're done looking at it
 func unfocus(card: Card) -> void:
 	if _current_focus_source == card:
@@ -76,3 +82,9 @@ func unfocus(card: Card) -> void:
 				$Focus.modulate, Color(1,1,1,0), 0.25,
 				Tween.TRANS_SINE, Tween.EASE_IN)
 		$Focus/Tween.start()
+
+
+# Takes care to resize the child viewport, when the main viewport is resized
+func _on_viewport_resized() -> void:
+	if ProjectSettings.get("display/window/stretch/mode") == "disabled":
+		$ViewportContainer.rect_size = get_viewport().size

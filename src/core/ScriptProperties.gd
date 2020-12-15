@@ -31,7 +31,8 @@ const KEY_SUBJECT_V_TARGET := "target"
 const KEY_SUBJECT_V_SELF := "self"
 # * If this is the value of the "subject" key,
 # then we search all cards on the table
-# by node order, and return **all** candidates that match the filter
+# by node order, and return candidates equal to KEY_SUBJECT_COUNT
+# that match the filters
 #
 # This allows us to make tasks which will affect more than 1 card at
 # the same time (e.g. "All Soldiers")
@@ -47,6 +48,36 @@ const KEY_SUBJECT_V_INDEX := "index"
 # * If this is the value of the "subject" key,
 # then we use the subject specified in the previous task
 const KEY_SUBJECT_V_PREVIOUS := "previous"
+# Used when we're seeking a card
+# to limit the amount to retrieve to this amount
+# Work with the following task/key combinations:
+# * move_card_cont_to_board
+#   * KEY_SUBJECT_V_TUTOR
+#   * KEY_SUBJECT_V_INDEX
+# * move_card_cont_to_cont
+#   * KEY_SUBJECT_V_TUTOR
+#   * KEY_SUBJECT_V_INDEX
+# * move_card_to_container
+#   * KEY_SUBJECT_V_BOARDSEEK
+# * move_card_to_board
+#   * KEY_SUBJECT_V_BOARDSEEK
+# Default is to seek only 1 card.
+# when used in combination with KEY_SUBJECT_V_BOARDSEEK value can
+# also be KEY_SUBJECT_COUNT_V_ALL which will simply set all cards
+# that match the filters as subjects
+const KEY_SUBJECT_COUNT := "subject_count"
+# When specified as the value of KEY_SUBJECT_COUNT, will retrieve as many
+# cards as match the criteria.
+# Useful with the following KEY/VALUE combinations
+# * move_card_cont_to_board
+#   * KEY_SUBJECT_V_TUTOR
+# * move_card_cont_to_cont
+#   * KEY_SUBJECT_V_TUTOR
+# * move_card_to_container
+#   * KEY_SUBJECT_V_BOARDSEEK
+# * move_card_to_board
+#   * KEY_SUBJECT_V_BOARDSEEK
+const KEY_SUBJECT_COUNT_V_ALL := "all"
 # This key is used to mark a task as being a cost requirement before the
 # rest of the defined tasks can execute.
 #
@@ -57,6 +88,8 @@ const KEY_SUBJECT_V_PREVIOUS := "previous"
 # * rotate_card
 # * flip_card
 # * mod_tokens
+# * move_card_cont_to_cont
+# * move_card_cont_to_board
 const KEY_IS_COST := "is_cost"
 # Used when a script is triggered by a signal.
 #
@@ -73,6 +106,9 @@ const KEY_DEGREES := "degrees"
 # * true: The card will be set face-up
 # * false: The card will be set face-down
 const KEY_SET_FACEUP := "set_faceup"
+# Used when a script is using the modify_properties task.
+# The value is supposed to be a dictionary of `"property name": value` entries
+const KEY_MODIFY_PROPERTIES := "set_properties"
 # Used when a script is using one of the following tasks
 # * move_card_cont_to_cont
 # * move_card_cont_to_board
@@ -93,6 +129,12 @@ const KEY_DEST_CONTAINER := "dest_container"
 #
 # Default is to seek card at index 0
 const KEY_SUBJECT_INDEX := "subject_index"
+# Special entry to be used with KEY_SUBJECT_INDEX instead of an integer
+# If specified, explicitly looks for the top "card" of a pile
+const KEY_SUBJECT_INDEX_V_TOP := "top"
+# Special entry to be used with KEY_SUBJECT_INDEX instead of an integer
+# If specified, explicitly looks for the "bottom" card of a pile
+const KEY_SUBJECT_INDEX_V_BOTTOM := "bottom"
 # Used when placing a card inside a [CardContainer]
 # in one of the follwing tasks
 # * move_card_to_container
@@ -125,6 +167,20 @@ const KEY_TOKEN_MODIFICATION := "modification"
 #
 # This is the path to the card template scene to use for this card
 const KEY_CARD_SCENE := "card_scene"
+# Used by the "ask_integer" task. Specifies the minimum value the number
+# needs to have
+const KEY_ASK_INTEGER_MIN := "ask_int_min"
+# Used by the "ask_integer" task. Specifies the maximum value the number
+# needs to have
+const KEY_ASK_INTEGER_MAX := "ask_int_max"
+# This is a versatile value that can be inserted into any various keys
+# when a task needs to use a previously inputed integer.
+# When detected ,the task will retrieve the stored number and use it as specified
+#
+# The following keys support this value
+# * KEY_TOKEN_MODIFICATION
+# * KEY_SUBJECT_COUNT (only for specific tasks, see documentation)
+const VALUE_RETRIEVE_INTEGER := "retrieve_integer"
 # Specifies whether this script or task can be skipped by the owner.
 #
 # This value needs to be prepended and placed
@@ -176,6 +232,7 @@ const KEY_IS_OPTIONAL := "is_optional_"
 # This is open ended in the end, as the check can be run either
 # against the trigger card, or the subjects card
 # see _check_properties()
+
 const FILTER_PROPERTIES := "filter_properties_"
 # Filter used in for checking against TRIGGER_DEGREES
 const FILTER_DEGREES := "filter_degrees"
@@ -193,6 +250,62 @@ const FILTER_TOKEN_COUNT := "filter_token_count"
 const FILTER_TOKEN_DIFFERENCE := "filter_token_difference"
 # Filter used for checking against TRIGGER_TOKEN_NAME
 const FILTER_TOKEN_NAME := "filter_token_name"
+# Filter key used for checking against card_properties_modified details.
+#
+# Checking for modified properties is a bit trickier than other filters
+# A signal emited from modified properties, will include as values the
+# property name changed, and its new and old values.
+#
+# The filter specified in the card script definition, will have
+# as the requested property filter, a dictionary inside the card_scripts
+# with the key "filter_modified_properties".
+#
+# Inside that dictionary will be another dictionary with one key per
+# property. That key inside will (optionally) have yet another dictionary
+# within, with specific values to filter. A sample filter script for triggering
+# only if a specific property was modified would look like this:
+# ```
+#{"card_properties_modified": {
+#	"hand": [{
+#		"name": "flip_card",
+#		"subject": "self",
+#		"set_faceup": false
+#	}],
+#	"filter_modified_properties":
+#		{
+#			"Type": {}
+#		},
+#	"trigger": "another"}
+#}
+# ```
+# The above example will trigger only if the "Type" property of another card
+# is modified. But it does not care to what value the Type property changed.
+#
+# A more advanced trigger might look like this:
+# ```
+#{"card_properties_modified": {
+#	"hand": [{
+#		"name": "flip_card",
+#		"subject": "self",
+#		"set_faceup": false
+#		}],
+#	"filter_modified_properties": {
+#		"Type": {
+#			"new_value": "Orange",
+#			"previous_value": "Green"
+#		}
+#	},
+#	"trigger": "another"}
+#}
+# ```
+# The above example will only trigger on the "Type" property changing on
+# another card, and only if it changed from "Green" to "Orange"
+const FILTER_MODIFIED_PROPERTIES := "filter_modified_properties"
+# Filter used for checking against TRIGGER_NEW_PROPERTY_VALUE
+const FILTER_MODIFIED_PROPERTY_NEW_VALUE := "new_value"
+# Filter used for checking against TRIGGER_PREV_PROPERTY_VALUE
+const FILTER_MODIFIED_PROPERTY_PREV_VALUE := "previous_value"
+
 
 #---------------------------------------------------------------------
 # Signal Properties
@@ -213,6 +326,19 @@ const TRIGGER_DEGREES := "degrees"
 # * true: Trigger turned face-up
 # * false: Trigger turned face-down
 const TRIGGER_FACEUP := "is_faceup"
+# Filter value sent by the trigger Card `card_properties_modified` signal.
+#
+# This is the property name
+const TRIGGER_MODIFIED_PROPERTY_NAME := "property_name"
+# Filter value sent by the trigger Card `card_properties_modified` signal.
+#
+# This is the current value of the property.
+const TRIGGER_NEW_PROPERTY_VALUE := "new_property_value"
+# Filter value sent by the trigger Card `card_properties_modified` signal.
+#
+# This is the value the property had before it was modified
+const TRIGGER_PREV_PROPERTY_VALUE := "previous_property_value"
+
 # Filter value sent by one of the trigger Card's following signals:
 # * card_moved_to_board
 # * card_moved_to_pile
@@ -244,7 +370,7 @@ const TRIGGER_TOKEN_NAME = "token_name"
 # * card_unattached
 # It contains the host object onto which this card attached
 # of from which it unattached
-const TRIGGER_HOST = "token_name"
+const TRIGGER_HOST = "host"
 
 
 #---------------------------------------------------------------------
@@ -253,7 +379,11 @@ const TRIGGER_HOST = "token_name"
 # Some filter check signals against constants. They are defined below
 #---------------------------------------------------------------------
 
+# Value is sent by trigger when new token count is higher than old token count.
+# Compared against FILTER_TOKEN_DIFFERENCE
 const TRIGGER_V_TOKENS_INCREASED := "increased"
+# Value is sent by trigger when new token count is lower than old token count.
+# Compared against FILTER_TOKEN_DIFFERENCE
 const TRIGGER_V_TOKENS_DECREASED := "decreased"
 
 
@@ -278,6 +408,10 @@ static func get_default(property: String):
 			default = 1
 		KEY_IS_OPTIONAL:
 			default = false
+		KEY_MODIFY_PROPERTIES:
+			default = {}
+		KEY_SUBJECT_COUNT:
+			default = 1
 		_:
 			default = null
 	return(default)
@@ -348,6 +482,41 @@ static func filter_trigger(
 			and card_scripts.get(FILTER_TOKEN_NAME) != \
 			signal_details.get(TRIGGER_TOKEN_NAME):
 		is_valid = false
+	# Modified Property filter checks
+	# See FILTER_MODIFIED_PROPERTIES documentation
+	# If the trigger requires a filter on modified properties...
+	if card_scripts.get(FILTER_MODIFIED_PROPERTIES):
+		# Then the filter entry will always contain a dictionary.
+		# We extract that dictionary in mod_prop_dict.
+		var mod_prop_dict = card_scripts.get(FILTER_MODIFIED_PROPERTIES)
+		# Each signal for modified properties will provide the property name
+		# We store that in signal_modified_property
+		var signal_modified_property = signal_details.get(TRIGGER_MODIFIED_PROPERTY_NAME)
+		# If the property changed that is mentioned in the signal
+		# does not match any of the properties requested in the filter,
+		# then the trigger does not match
+		if not signal_modified_property in mod_prop_dict.keys():
+			is_valid = false
+		else:
+			# if the property changed that is mentioned in the signal
+			# matches the properties requested in the filter
+			# Then we also need to check if the filter specified
+			# filtering on specific new or old values as well
+			# To do that, we extract the possible new/old values needed
+			# in the filter into mod_prop_values.
+			# The key is signal_modified_property and it will contain another
+			# dict, with the old and new values
+			var mod_prop_values = mod_prop_dict.get(signal_modified_property)
+			# Finally we check if it requires a specific new or old property
+			# value. If it does, we check it against the signal details
+			if mod_prop_values.get(FILTER_MODIFIED_PROPERTY_NEW_VALUE) \
+					and mod_prop_values.get(FILTER_MODIFIED_PROPERTY_NEW_VALUE) != \
+					signal_details.get(TRIGGER_NEW_PROPERTY_VALUE):
+				is_valid = false
+			if mod_prop_values.get(FILTER_MODIFIED_PROPERTY_PREV_VALUE) \
+					and mod_prop_values.get(FILTER_MODIFIED_PROPERTY_PREV_VALUE) != \
+					signal_details.get(TRIGGER_PREV_PROPERTY_VALUE):
+				is_valid = false
 	return(is_valid)
 
 
@@ -375,8 +544,6 @@ static func check_properties(card, card_scripts, type := "trigger") -> bool:
 				if not prop_limits[property] in card.properties[property]:
 					card_matches = false
 			else:
-				#print(type,prop_limits[property], card.properties[property])
 				if prop_limits[property] != card.properties[property]:
 					card_matches = false
-#	if card.card_name == "Test Card 2":
 	return(card_matches)

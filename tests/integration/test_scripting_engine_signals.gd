@@ -114,7 +114,7 @@ func test_card_properties_filter():
 	yield(table_move(target2, Vector2(900,100)), "completed")
 	target.card_rotation = 90
 	yield(yield_for(0.5), YIELD)
-	assert_false(card._is_targetting,
+	assert_false(card.targeting_arrow.is_targeting,
 			"Card did not start targeting since filter_properties_trigger"
 			+ "  did not match even though filter_properties_subject matched")
 	yield(target_card(cards[6],target2), "completed")
@@ -135,10 +135,10 @@ func test_card_properties_filter():
 			+ " even though filter_properties_trigger does not match")
 	target2.card_rotation = 90
 	yield(yield_for(0.5), YIELD)
-	assert_true(cards[7]._is_targetting,
+	assert_true(cards[7].targeting_arrow.is_targeting,
 			"Card started targeting since filter_properties_trigger "
 			+ "match even though filter_properties_subject don't match")
-	assert_false(cards[6]._is_targetting,
+	assert_false(cards[6].targeting_arrow.is_targeting,
 			"Card did not start targeting since filter_properties_trigger"
 			+ "  did not match even though filter_properties_subject matched")
 	yield(target_card(cards[7],target), "completed")
@@ -349,7 +349,7 @@ func test_card_moved_to_pile():
 
 func test_card_token_modified():
 	# warning-ignore:return_value_discarded
-	target.mod_token("void",5)
+	target.tokens.mod_token("void",5)
 	yield(yield_for(0.1), YIELD)
 	watch_signals(target)
 	# This card should turn face-down since there's no limit
@@ -413,7 +413,7 @@ func test_card_token_modified():
 			"filter_token_name": "Tech",
 			"trigger": "another"}}
 	# warning-ignore:return_value_discarded
-	target.mod_token("void", -5)
+	target.tokens.mod_token("void", -5)
 	yield(yield_for(0.1), YIELD)
 	assert_signal_emitted_with_parameters(
 				target,"card_token_modified",
@@ -445,10 +445,10 @@ func test_card_targeted():
 				"subject": "self",
 				"set_faceup": false}],
 			"trigger": "another"}}
-	cards[4].initiate_targeting()
+	cards[4].targeting_arrow.initiate_targeting()
 	yield(target_card(cards[4], target), "completed")
 	yield(yield_for(0.1), YIELD)
-	
+
 	assert_signal_emitted_with_parameters(
 				target,"card_targeted",
 				[target,"card_targeted",
@@ -489,3 +489,54 @@ func test_card_un_attached():
 				{"host": host}])
 	assert_false(cards[3].is_faceup,
 			"Card turned face-down after signal trigger")
+
+func test_card_properties_modified():
+	watch_signals(target)
+	card.scripts = {"card_properties_modified": {
+			"hand": [
+				{"name": "flip_card",
+				"subject": "self",
+				"set_faceup": false}],
+			"filter_modified_properties": {"Type": {}},
+			"trigger": "another"}}
+	cards[2].scripts = {"card_properties_modified": {
+			"hand": [
+				{"name": "flip_card",
+				"subject": "self",
+				"set_faceup": false}],
+			"filter_modified_properties": {"Tag": {}},
+			"trigger": "another"}}
+	cards[3].scripts = {"card_properties_modified": {
+			"hand": [
+				{"name": "flip_card",
+				"subject": "self",
+				"set_faceup": false}],
+			"filter_modified_properties": {"Type":
+				{"new_value": "Orange",
+				"previous_value": "Green"}},
+			"trigger": "another"}}
+	cards[4].scripts = {"card_properties_modified": {
+			"hand": [
+				{"name": "flip_card",
+				"subject": "self",
+				"set_faceup": false}],
+			"filter_modified_properties": {"Type":
+				{"new_value": "Purple"}},
+			"trigger": "another"}}
+	target.modify_property("Type", "Orange")
+	cards[4]._debugger_hook = true
+	yield(yield_for(0.1), YIELD)
+	assert_signal_emitted_with_parameters(
+				target,"card_properties_modified",
+				[target,"card_properties_modified",
+				{"property_name": "Type",
+				"new_property_value": "Orange",
+				"previous_property_value": "Green"}])
+	assert_false(card.is_faceup,
+			"Card turned face-down after signal trigger match")
+	assert_true(cards[2].is_faceup,
+			"Card stayed face-up after signal trigger not matching")
+	assert_false(cards[3].is_faceup,
+			"Card turned face-down after all property filters match")
+	assert_true(cards[4].is_faceup,
+			"Card stayed face-up after after one property filters not matching")

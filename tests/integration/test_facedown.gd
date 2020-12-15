@@ -49,7 +49,7 @@ func test_board_facedown():
 	assert_almost_eq(card_back.rect_position.x, card_front.rect_size.x/2, 0.1,
 			"Back rect_position.x == rect_size.x/2 when card is turned face up again")
 
-	card._on_Card_mouse_entered()
+	yield(move_mouse(card.global_position), 'completed')
 	yield(yield_for(0.1), YIELD) # Wait to allow dupe to be created
 	dupe = main._previously_focused_cards.back()
 	var dupe_front
@@ -94,22 +94,23 @@ func test_board_facedown():
 	yield(yield_to(card._flip_tween, "tween_all_completed", 1), YIELD)
 	assert_true(view_button.visible,
 			"View button should be visible while card is face down")
-	assert_eq(card._ReturnCode.OK,card.set_is_viewed(false),
+	assert_eq(CFConst.ReturnCode.OK,card.set_is_viewed(false),
 			"View function returns OK requesting false when card is_viewed == false while facedown")
-	assert_eq(card._ReturnCode.CHANGED,card.set_is_viewed(true),
+	assert_eq(CFConst.ReturnCode.CHANGED,card.set_is_viewed(true),
 			"View function returns Changed when requesting true first time with card facedown")
 	assert_true(dupe_front.visible,
 			"Dupe is visible after pressing view button while still hovering the card")
-	assert_eq(card._ReturnCode.OK,card.set_is_viewed(true),
+	assert_eq(CFConst.ReturnCode.OK,card.set_is_viewed(true),
 			"View function returns OK when requesting true a second time with card facedown")
-	assert_eq(card._ReturnCode.FAILED,card.set_is_viewed(false),
+	assert_eq(CFConst.ReturnCode.FAILED,card.set_is_viewed(false),
 			"View function returns FAILED requesting false when card is_viewed == true while facedown")
 	assert_true(viewed_icon.visible,
 			"View icon is visible while card is is_viewed()")
-	card._on_Card_mouse_exited()
-	yield(yield_for(0.2), YIELD) # Wait to allow dupe to be destroyed
-	card._on_Card_mouse_entered()
-	yield(yield_for(0.2), YIELD) # Wait to allow dupe to be created
+
+	yield(move_mouse(card.global_position - Vector2(0,100)), 'completed')
+#	yield(yield_for(0.2), YIELD) # Wait to allow dupe to be destroyed
+	yield(move_mouse(card.global_position), 'completed')
+#	yield(yield_for(0.2), YIELD) # Wait to allow dupe to be created
 	dupe = main._previously_focused_cards.back()
 	dupe_front = dupe.get_node("Control/Front")
 	dupe_back = dupe.get_node("Control/Back")
@@ -118,11 +119,11 @@ func test_board_facedown():
 
 	card.is_faceup = true
 	yield(yield_to(card._flip_tween, "tween_all_completed", 1), YIELD)
-	assert_eq(card._ReturnCode.FAILED,card.set_is_viewed(true),
+	assert_eq(CFConst.ReturnCode.FAILED,card.set_is_viewed(true),
 			"View function returns FAILED when requesting true while card is faceup")
 	gut.p(card.is_viewed)
 	gut.p(card.is_faceup)
-	assert_eq(card._ReturnCode.OK,card.set_is_viewed(false),
+	assert_eq(CFConst.ReturnCode.OK,card.set_is_viewed(false),
 			"View function returns OK when requesting false and is_viewed == false")
 
 func test_off_board_facedown():

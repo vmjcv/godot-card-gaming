@@ -2,6 +2,29 @@
 # and arrange their indexing and visibility
 class_name CardContainer
 extends Area2D
+
+# Cache control button
+var all_manipulation_buttons := [] setget ,get_all_manipulation_buttons
+
+# The various automatic placements possible on a card
+# None means the container will not be adjusted as the viewport changes
+# All other options will automatically adjust themselves.
+enum Placements{
+	NONE
+	TOP_RIGHT
+	TOP_MIDDLE
+	TOP_LEFT
+	RIGHT_MIDDLE
+	LEFT_MIDDLE
+	BOTTOM_RIGHT
+	BOTTOM_MIDDLE
+	BOTTOM_LEFT
+}
+
+# This variable spefifies the position of the card on the game layout
+# This position will be retained as the window is resized.
+export(Placements) var placement
+
 # ManipulationButtons node
 onready var manipulation_buttons := $Control/ManipulationButtons
 # ManipulationButtons tween node
@@ -10,14 +33,14 @@ onready var manipulation_buttons_tween := $Control/ManipulationButtons/Tween
 onready var control := $Control
 # Shuffle button
 onready var shuffle_button := $Control/ManipulationButtons/Shuffle
-# Cache control button
-var all_manipulation_buttons := [] setget ,get_all_manipulation_buttons
+onready var highlight := $Control/Highlight
 
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	_init_ui()
 	_init_signal()
+
 
 
 # Initialize some of the controls to ensure
@@ -38,6 +61,7 @@ func _init_signal() -> void:
 		button.connect("mouse_entered", self, "_on_button_mouse_entered")
 		#button.connect("mouse_exited", self, "_on_button_mouse_exited")
 	shuffle_button.connect("pressed", self, '_on_Shuffle_Button_pressed')
+	get_viewport().connect("size_changed",self,"_on_viewport_resized")
 
 # Hides the container manipulation buttons when you stop hovering over them
 func _on_Control_mouse_exited() -> void:
@@ -58,20 +82,6 @@ func _on_button_mouse_entered() -> void:
 	manipulation_buttons_tween.remove_all()
 	for button in all_manipulation_buttons:
 		button.modulate[3] = 1
-
-
-### Ugh, I will need to implement the same _are_buttons_hovered nosense
-### That I'm doing in [Card] to avoid the buttons sometimes staying visible
-#
-## Ensures the mouse is invisible on hover
-## Ensures that button it not trying to appear via previous animation
-##
-## This is necessary because sometimes the buttons stay visible
-## When the mouse exits the whole control area from their location
-#func _on_button_mouse_exited() -> void:
-#	manipulation_buttons_tween.remove_all()
-#	for button in all_manipulation_buttons:
-#		button.modulate[3] = 1
 
 
 # Triggers pile shuffling
@@ -154,6 +164,32 @@ func get_random_card() -> Card:
 		return cardsArray[CFUtils.randi() % len(cardsArray)]
 
 
+# Return the card with the lowest index
+func get_last_card() -> Card:
+	var card: Card = null
+	# prevents from trying to retrieve more cards
+	# than are in our deck and crashing godot.
+	if get_card_count():
+		# Counter intuitively, the "top" card in the pile
+		# is the last node in the node hierarchy, so
+		# to retrieve the last card placed, we choose the last index
+		card = get_all_cards().back()
+	return card # Returning the card object for unit testing
+
+
+# Teturn the card with the highest index
+func get_first_card() -> Card:
+	var card: Card = null
+	# prevents from trying to retrieve more cards
+	# than are in our deck and crashing godot.
+	if get_card_count():
+		# Counter intuitively, the "bottom" card in the pile
+		# as it appears on screen, is the first node in the node hierarchy, so
+		# to retrieve the last c
+		card = get_card(0)
+	return card # Returning the card object for unit testing
+
+
 # Randomly rearranges the order of the Card nodes.
 func shuffle_cards() -> void:
 	var cardsArray := []
@@ -185,11 +221,34 @@ func translate_card_index_to_node_index(index: int) -> int:
 		node_index = card_at_index.get_index()
 	return node_index
 
-# Changes card highlight colour.
-func set_highlight(requestedFocus: bool, hoverColour = CFConst.TARGET_HOVER_COLOUR) -> void:
-	$Control/Highlight.visible = requestedFocus
-	if requestedFocus:
-		$Control/Highlight.modulate = hoverColour
-	else:
-		$Control/Highlight.modulate = CFConst.TARGET_HOVER_COLOUR
 
+# Adjusts the placement of the node, according to the placement var
+# So that it always stays in the same approximate location
+func re_place():
+		var place: Vector2
+		match placement:
+			Placements.TOP_RIGHT, Placements.RIGHT_MIDDLE, Placements.BOTTOM_RIGHT:
+				place.x = get_viewport().size.x - $Control.rect_size.x
+				add_to_group("right")
+			Placements.TOP_LEFT, Placements.LEFT_MIDDLE, Placements.BOTTOM_LEFT:
+				place.x = 0
+				add_to_group("left")
+			Placements.TOP_MIDDLE, Placements.BOTTOM_MIDDLE:
+				place.x = get_viewport().size.x / 2 - $Control.rect_size.x / 2
+		match placement:
+			Placements.TOP_LEFT, Placements.TOP_MIDDLE, Placements.TOP_RIGHT:
+				place.y = 0
+				add_to_group("top")
+			Placements.BOTTOM_LEFT, Placements.BOTTOM_MIDDLE, Placements.BOTTOM_RIGHT:
+				place.y = get_viewport().size.y - $Control.rect_size.y
+				add_to_group("bottom")
+			Placements.RIGHT_MIDDLE, Placements.LEFT_MIDDLE:
+				place.y = get_viewport().size.y / 2 - $Control.rect_size.y / 2
+#		if name == "Deck":
+#			print('view: ', get_viewport().size.y, ' size: ',$Control.rect_size,' pos: ',position,' place: ', place)
+		position = place
+
+
+func _on_viewport_resized() -> void:
+	if ProjectSettings.get("display/window/stretch/mode") == "disabled":
+		re_place()

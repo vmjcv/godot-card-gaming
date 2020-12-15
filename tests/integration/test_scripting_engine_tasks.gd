@@ -154,7 +154,7 @@ func test_mod_tokens():
 			"modification": 5,
 			"token_name":  "industry"}]}}
 	target.execute_scripts()
-	var industry_token: Token = target.get_token("industry")
+	var industry_token: Token = target.tokens.get_token("industry")
 	assert_eq(5,industry_token.count,"Token increased by specified amount")
 	card.scripts = {"manual": {"hand": [
 			{"name": "mod_tokens",
@@ -180,7 +180,7 @@ func test_spawn_card():
 	card = cfc.NMAP.board.get_card(0)
 	assert_eq("res://src/core/CardTemplate.tscn",card.filename,
 		"Card of the correct scene spawned")
-	assert_eq(card.ON_PLAY_BOARD,card.state,
+	assert_eq(Card.CardState.ON_PLAY_BOARD,card.state,
 		"Spawned card left in correct state")
 
 
@@ -238,3 +238,15 @@ func test_host_card():
 	yield(yield_to(card._tween, "tween_all_completed", 0.5), YIELD)
 	assert_eq(target.current_host_card,card,
 			"target has been hosted on the card")
+
+
+func test_modify_properties():
+	card.scripts = {"manual": {"hand": [
+			{"name": "modify_properties",
+			"subject": "self",
+			"set_properties": {"Name": "GUT Test", "Type": "Orange"}}]}}
+	card.execute_scripts()
+	assert_eq("GUT Test",card.card_name,
+			"Card name should be changed")
+	assert_eq("GUT Test",card.card_name,
+			"Card type should be changed")

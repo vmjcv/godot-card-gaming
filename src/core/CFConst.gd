@@ -7,6 +7,16 @@ class_name CFConst
 extends Reference
 
 
+# The possible return codes a function can return
+#
+# * OK is returned when the function did not end up doing any changes
+# * CHANGE is returned when the function modified the card properties in some way
+# * FAILED is returned when the function failed to modify the card for some reason
+enum ReturnCode {
+	OK,
+	CHANGED,
+	FAILED,
+}
 # The focus style used by the engine
 # * SCALED means that the cards simply scale up when moused over in the hand
 # * VIEWPORT means that a larger version of the card appears when mousing over it
@@ -35,6 +45,10 @@ enum ShuffleStyle {
 	OVERHAND,
 }
 
+# When this is set, the player cannot drop cards on the board.
+# If the card is not hovering over a pile when it is dropped, it will
+# simply return to its originating container
+const DISABLE_BOARD_DROP := false
 # Switch this off to disable fancy movement of cards during draw/discard
 const FANCY_MOVEMENT := true
 # The focus style selected for this game. See enum `FocusStyle`
@@ -53,7 +67,7 @@ const PATH_CORE := "res://src/core/"
 # The path where scenes and scripts customized for this specific game exist
 # (e.g. board, card back etc)
 const PATH_CUSTOM := "res://src/custom/"
-# The path where card template scenes exist. 
+# The path where card template scenes exist.
 # These is usually one scene per type of card in the game
 const PATH_CARDS := PATH_CUSTOM + "cards/"
 # The path where the set definitions exist.
@@ -62,13 +76,6 @@ const PATH_SETS := PATH_CARDS + "sets/"
 # The path where assets needed by this game are placed
 # such as token images
 const PATH_ASSETS := "res://assets/"
-# The path to the optional confirm scene. This has to be defined explicitly
-# here, in order to use it in its preload, otherwise the parser gives an error
-const _PATH_OPTIONAL_CONFIRM = PATH_CORE + "OptionalConfirmation.tscn"
-# The optional confirm scene. Normally we would define this inside utils.gd
-# where it's being used. But the parser gives an error when trying to set
-# a const using cfc consts.
-const OPTIONAL_CONFIRM = preload(_PATH_OPTIONAL_CONFIRM)
 # The text which is prepended to files to signify the contain
 # Card definitions for a specific set
 const CARD_SET_NAME_PREPEND := "SetDefinition_"
@@ -170,5 +177,3 @@ const NODES_MAP := {
 	'deck': "Board/Deck",
 	'discard': "Board/DiscardPile"
 	}
-const pile_names = ['deck','discard']
-const hand_names = ['hand']

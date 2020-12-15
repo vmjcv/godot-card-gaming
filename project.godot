@@ -34,6 +34,16 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://src/core/CardTemplate.gd"
 }, {
+"base": "Panel",
+"class": "CardBack",
+"language": "GDScript",
+"path": "res://src/core/Card/CardBack.gd"
+}, {
+"base": "CardBack",
+"class": "CardBackGlow",
+"language": "GDScript",
+"path": "res://src/core/Card/CardBackGlow.gd"
+}, {
 "base": "Reference",
 "class": "CardConfig",
 "language": "GDScript",
@@ -53,6 +63,16 @@ _global_script_classes=[ {
 "class": "Hand",
 "language": "GDScript",
 "path": "res://src/core/Hand.gd"
+}, {
+"base": "Control",
+"class": "Highlight",
+"language": "GDScript",
+"path": "res://src/core/Highlight.gd"
+}, {
+"base": "VBoxContainer",
+"class": "ManipulationButtons",
+"language": "GDScript",
+"path": "res://src/core/Card/ManipulationButtons.gd"
 }, {
 "base": "Area2D",
 "class": "MousePointer",
@@ -79,10 +99,20 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://src/core/ScriptingEngine.gd"
 }, {
+"base": "Line2D",
+"class": "TargetingArrow",
+"language": "GDScript",
+"path": "res://src/core/Card/TargetingArrow.gd"
+}, {
 "base": "HBoxContainer",
 "class": "Token",
 "language": "GDScript",
 "path": "res://src/core/Token.gd"
+}, {
+"base": "Node2D",
+"class": "TokenDrawer",
+"language": "GDScript",
+"path": "res://src/core/Card/TokenDrawer.gd"
 }, {
 "base": "Node",
 "class": "UTCommon",
@@ -100,16 +130,22 @@ _global_script_class_icons={
 "CFControl": "",
 "CFUtils": "",
 "Card": "",
+"CardBack": "",
+"CardBackGlow": "",
 "CardConfig": "",
 "CardContainer": "",
 "CustomScripts": "",
 "Hand": "",
+"Highlight": "",
+"ManipulationButtons": "",
 "MousePointer": "",
 "Pile": "",
 "SP": "",
 "ScriptTask": "",
 "ScriptingEngine": "",
+"TargetingArrow": "",
 "Token": "",
+"TokenDrawer": "",
 "UTCommon": "",
 "ViewportCardFocus": ""
 }
@@ -128,7 +164,6 @@ cfc="*res://src/core/CFControl.gd"
 
 window/size/width=1280
 window/size/height=720
-window/stretch/mode="2d"
 window/stretch/aspect="keep"
 
 [editor_plugins]

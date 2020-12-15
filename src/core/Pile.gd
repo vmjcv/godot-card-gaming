@@ -7,8 +7,6 @@ extends CardContainer
 # The shuffle style chosen for this pile. See CFConst.ShuffleStyle documentation.
 export(CFConst.ShuffleStyle) var shuffle_style = CFConst.ShuffleStyle.AUTO
 
-
-
 # If this is set to true, cards on this stack will be placed face-up.
 # Otherwise they will be placed face-down.
 export var faceup_cards := false
@@ -22,6 +20,7 @@ func _ready():
 	$ViewPopup.connect("popup_hide",self,'_on_ViewPopup_popup_hide')
 	# warning-ignore:return_value_discarded
 	$ViewPopup.connect("about_to_show",self,'_on_ViewPopup_about_to_show')
+	re_place()
 
 
 func _process(_delta) -> void:
@@ -79,7 +78,7 @@ func _on_ViewPopup_popup_hide() -> void:
 			# whatever is the default for the pile
 			if card.is_faceup != faceup_cards:
 				card.set_is_faceup(faceup_cards,true)
-			card.state = card.IN_PILE
+			card.state = card.CardState.IN_PILE
 	reorganize_stack()
 	# We prevent the button from being pressed twice while the popup is open
 	# as it will bug-out
@@ -112,7 +111,8 @@ func reorganize_stack() -> void:
 				-get_card_index(c)):
 			c.position = Vector2(0.5 * get_card_index(c),
 					-get_card_index(c))
-	#The size of the panel has to be modified to be as large as the size of the cardd
+	# The size of the panel has to be modified to be as large as the size
+	# of the card stack
 	# TODO: This logic has to be adapted depending on where on the viewport
 	# This pile is anchored. The below calculations assume bottom-left.
 	$Control.rect_size = Vector2(156 + 0.5 * get_card_count(), 246 + get_card_count())
@@ -120,6 +120,14 @@ func reorganize_stack() -> void:
 	# The highlight has to also be shifted higher or else it will just extend
 	# below the viewport
 	$Control/Highlight.rect_position.y = -get_card_count()
+	.re_place()
+	# since we're adding cards towards the top, we do not want the re_place()
+	# function to push the pile higher than the edge of the screen
+	# it is supposed to be
+	if "bottom" in get_groups() or "top" in get_groups():
+		position.y += get_card_count()
+#	if "right" in get_groups():
+#		position.x -= get_card_count() * 0.5
 
 
 # Override the godot builtin move_child() method,
@@ -145,30 +153,16 @@ func get_all_cards(scanViewPopup := true) -> Array:
 	return cardsArray
 
 
-# Return the top a [Card] object from the pile.
+# A wrapper for the CardContainer's get_last_card()
+# which make sense for the cards' index in a pile
 func get_top_card() -> Card:
-	var card: Card = null
-	# prevents from trying to retrieve more cards
-	# than are in our deck and crashing godot.
-	if get_card_count():
-		# Counter intuitively, the "top" card in the pile
-		# is the last node in the node hierarchy, so
-		# to retrieve the last card placed, we choose the last index
-		card = get_all_cards().back()
-	return card # Returning the card object for unit testing
+	return(get_last_card())
 
 
-# Teturn the bottom [Card] object from the pile.
+# A wrapper for the CardContainer's get_first_card()
+# which make sense for the cards' index in a pile
 func get_bottom_card() -> Card:
-	var card: Card = null
-	# prevents from trying to retrieve more cards
-	# than are in our deck and crashing godot.
-	if get_card_count():
-		# Counter intuitively, the "bottom" card in the pile
-		# as it appears on screen, is the first node in the node hierarchy, so
-		# to retrieve the last c
-		card = get_card(0)
-	return card # Returning the card object for unit testing
+	return(get_first_card())
 
 
 func get_stack_position(card: Card) -> Vector2:
@@ -197,7 +191,7 @@ func _slot_card_into_popup(card: Card) -> void:
 	# warning-ignore:return_value_discarded
 	card.set_is_faceup(true,true)
 	card.position = Vector2(0,0)
-	card.state = card.IN_POPUP
+	card.state = card.CardState.IN_POPUP
 
 # Randomly rearranges the order of the [Card] nodes.
 # Pile shuffling includes a fancy animation
@@ -329,6 +323,13 @@ func shuffle_cards(animate = true) -> void:
 	else:
 		# if we're already running another animation, just shuffle
 		.shuffle_cards()
+	reorganize_stack()
+
+
+# Overrides the re_place() function of [Pile] in order
+# to also restack the cards
+func re_place() -> void:
+	# reorganize_stack() calls .re_place() at the end
 	reorganize_stack()
 
 

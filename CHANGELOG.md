@@ -13,7 +13,17 @@
    * snap - Contribution by [@vmjcv](https://github.com/vmjcv).
    * overhand - Contribution by [@EasternMouse](https://github.com/EasternMouse).
 * Piles and Hand will highlight when a dragged card hovers over them to display where the card will be dropped when released.
-* source directories can now be renamed or moved.
+* Framework godot source directories can now be renamed or moved.
+* Added "Placement" option to select where each CardContainer will be setup on the board
+* If CardContainers have a specified placement on the board, a table resize will automatically move them to the right location. This means that stretch mode "disabled" is usable now.
+* Added switch to disable placement on board (for games that don't use it)
+
+#### Scripting Engine
+
+* Added new task "modify_properties", which allows scripts to change the card details.
+* Added new task "ask_integer", which allows the script to request a number from the player. Subsequent tasks can pull that number for their own effects
+* Some tasks can now use the new "subject_count" modulator which allows to affect more than 1 card.
+* Moving cards from containers can now be treated as a cost.
 
 ### Bugfixes
 

@@ -163,5 +163,105 @@ func test_token_cost():
 	yield(yield_to(card._tween, "tween_all_completed", 0.5), YIELD)
 	assert_eq(180,card.card_rotation,
 			"Card not rotated because negative token cost could not  be be paid")
-	assert_eq(1,card.get_token("bio").count,
+	assert_eq(1,card.tokens.get_token("bio").count,
 			"Token count that could not be paid remains the same")
+
+func test_modify_properties_cost():
+	card.scripts = {"manual": {"hand": [
+			{"name": "modify_properties",
+			"subject": "self",
+			"is_cost": true,
+			"set_properties": {"Type": card.properties["Type"]}},
+			{"name": "flip_card",
+			"subject": "self",
+			"set_faceup": false}]}}
+	card.execute_scripts()
+	yield(yield_to(card._flip_tween, "tween_all_completed", 0.4), YIELD)
+	assert_true(card.is_faceup,
+			"card should stay face-up because "
+			+ "property change cost could not be paid")
+	card.scripts = {"manual": {"hand": [
+			{"name": "modify_properties",
+			"subject": "self",
+			"is_cost": true,
+			"set_properties": {"Type": "Orange"}},
+			{"name": "flip_card",
+			"subject": "self",
+			"set_faceup": false}]}}
+	card.execute_scripts()
+	yield(yield_to(card._flip_tween, "tween_all_completed", 0.4), YIELD)
+	assert_false(card.is_faceup,
+			"card should turn face-down because "
+			+ "property change cost could be paid")
+
+func test_move_card_cont_to_cont_cost():
+	card.scripts = {"manual": {"hand": [
+			{"name": "move_card_cont_to_cont",
+			"is_cost": true,
+			"subject": "index",
+			"subject_index": "top",
+			"subject_count": 7,
+			"src_container":  cfc.NMAP.deck,
+			"dest_container":  cfc.NMAP.discard},
+			{"name": "flip_card",
+			"subject": "self",
+			"set_faceup": false}]}}
+	card.execute_scripts()
+	yield(yield_to(card._flip_tween, "tween_all_completed", 0.4), YIELD)
+	yield(yield_to(card._flip_tween, "tween_all_completed", 0.4), YIELD)
+	assert_false(card.is_faceup,
+			"card should turn face-down because "
+			+ "property change cost could be paid")
+	target.scripts = {"manual": {"hand": [
+			{"name": "move_card_cont_to_cont",
+			"is_cost": true,
+			"subject": "index",
+			"subject_index": "top",
+			"subject_count": 7,
+			"src_container":  cfc.NMAP.deck,
+			"dest_container":  cfc.NMAP.discard},
+			{"name": "flip_card",
+			"subject": "self",
+			"set_faceup": false}]}}
+	target.execute_scripts()
+	yield(yield_to(target._flip_tween, "tween_all_completed", 0.4), YIELD)
+	yield(yield_to(target._flip_tween, "tween_all_completed", 0.4), YIELD)
+	assert_true(target.is_faceup,
+			"card should stay face-up because "
+			+ "property change cost could not be paid")
+
+func test_move_card_cont_to_board_cost():
+	card.scripts = {"manual": {"hand": [
+			{"name": "move_card_cont_to_board",
+			"is_cost": true,
+			"subject": "index",
+			"subject_index": "top",
+			"subject_count": 7,
+			"src_container":  cfc.NMAP.deck,
+			"board_position":  Vector2(100,100)},
+			{"name": "flip_card",
+			"subject": "self",
+			"set_faceup": false}]}}
+	card.execute_scripts()
+	yield(yield_to(card._flip_tween, "tween_all_completed", 0.4), YIELD)
+	yield(yield_to(card._flip_tween, "tween_all_completed", 0.4), YIELD)
+	assert_false(card.is_faceup,
+			"card should turn face-down because "
+			+ "property change cost could be paid")
+	target.scripts = {"manual": {"hand": [
+			{"name": "move_card_cont_to_board",
+			"is_cost": true,
+			"subject": "index",
+			"subject_index": "top",
+			"subject_count": 7,
+			"src_container":  cfc.NMAP.deck,
+			"board_position":  Vector2(100,100)},
+			{"name": "flip_card",
+			"subject": "self",
+			"set_faceup": false}]}}
+	target.execute_scripts()
+	yield(yield_to(target._flip_tween, "tween_all_completed", 0.4), YIELD)
+	yield(yield_to(target._flip_tween, "tween_all_completed", 0.4), YIELD)
+	assert_true(target.is_faceup,
+			"card should stay face-up because "
+			+ "property change cost could not be paid")
