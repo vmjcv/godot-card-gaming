@@ -1,24 +1,222 @@
-[gd_scene load_steps=9 format=2]
+[gd_scene load_steps=18 format=2]
 
 [ext_resource path="res://src/custom/Board.gd" type="Script" id=1]
 [ext_resource path="res://src/custom/Deck.gd" type="Script" id=2]
 [ext_resource path="res://src/custom/Discard.gd" type="Script" id=3]
 [ext_resource path="res://src/core/Pile.tscn" type="PackedScene" id=4]
 [ext_resource path="res://src/core/Hand.tscn" type="PackedScene" id=5]
-[ext_resource path="res://src/custom/GUI.tscn" type="PackedScene" id=6]
+[ext_resource path="res://assets/img/sword.svg" type="Texture" id=6]
+[ext_resource path="res://assets/img/speed.svg" type="Texture" id=7]
+[ext_resource path="res://assets/img/setting.svg" type="Texture" id=8]
+[ext_resource path="res://assets/img/blood.svg" type="Texture" id=9]
+[ext_resource path="res://assets/img/shield.svg" type="Texture" id=10]
+[ext_resource path="res://assets/img/fire.svg" type="Texture" id=11]
+[ext_resource path="res://assets/img/ice.svg" type="Texture" id=12]
+[ext_resource path="res://assets/img/lantern.svg" type="Texture" id=13]
+[ext_resource path="res://assets/img/gold.svg" type="Texture" id=14]
+[ext_resource path="res://assets/img/map.svg" type="Texture" id=15]
+[ext_resource path="res://assets/img/card.svg" type="Texture" id=16]
 
-[sub_resource type="StyleBoxFlat" id=1]
-bg_color = Color( 0.0392157, 0.0392157, 0.0392157, 1 )
-corner_radius_top_left = 25
-corner_radius_top_right = 25
-corner_radius_bottom_right = 25
-corner_radius_bottom_left = 25
-
-[sub_resource type="RectangleShape2D" id=2]
+[sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 50, 50 )
 
-[node name="Board" type="Node2D"]
+[node name="Board" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_bottom = 6.10352e-05
+mouse_filter = 2
 script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+anchor_right = 1.0
+margin_bottom = 132.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
+margin_right = 1280.0
+margin_bottom = 132.0
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/HBoxContainer"]
+margin_right = 132.0
+margin_bottom = 132.0
+size_flags_vertical = 6
+
+[node name="blood" type="TextureButton" parent="MarginContainer/HBoxContainer/HBoxContainer2"]
+margin_top = 34.0
+margin_right = 64.0
+margin_bottom = 98.0
+rect_min_size = Vector2( 64, 64 )
+rect_clip_content = true
+hint_tooltip = "blood"
+size_flags_horizontal = 7
+size_flags_vertical = 6
+texture_normal = ExtResource( 9 )
+expand = true
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer/HBoxContainer2"]
+margin_left = 68.0
+margin_right = 132.0
+margin_bottom = 132.0
+
+[node name="gold" type="TextureButton" parent="MarginContainer/HBoxContainer/HBoxContainer2/VBoxContainer"]
+margin_right = 64.0
+margin_bottom = 64.0
+rect_min_size = Vector2( 64, 64 )
+hint_tooltip = "gold"
+size_flags_vertical = 6
+texture_normal = ExtResource( 14 )
+expand = true
+
+[node name="cards" type="TextureButton" parent="MarginContainer/HBoxContainer/HBoxContainer2/VBoxContainer"]
+margin_top = 68.0
+margin_right = 64.0
+margin_bottom = 132.0
+rect_min_size = Vector2( 64, 64 )
+hint_tooltip = "cards"
+size_flags_vertical = 6
+texture_normal = ExtResource( 16 )
+expand = true
+
+[node name="VSeparator" type="VSeparator" parent="MarginContainer/HBoxContainer"]
+margin_left = 136.0
+margin_right = 140.0
+margin_bottom = 132.0
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="MarginContainer/HBoxContainer"]
+margin_left = 144.0
+margin_right = 1076.0
+margin_bottom = 132.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer2"]
+margin_right = 932.0
+margin_bottom = 64.0
+size_flags_horizontal = 3
+size_flags_vertical = 7
+
+[node name="speed2" type="TextureButton" parent="MarginContainer/HBoxContainer/VBoxContainer2/HBoxContainer"]
+margin_right = 64.0
+margin_bottom = 64.0
+rect_min_size = Vector2( 64, 64 )
+hint_tooltip = "speed"
+size_flags_vertical = 6
+texture_normal = ExtResource( 10 )
+expand = true
+
+[node name="map2" type="TextureButton" parent="MarginContainer/HBoxContainer/VBoxContainer2/HBoxContainer"]
+margin_left = 68.0
+margin_right = 132.0
+margin_bottom = 64.0
+rect_min_size = Vector2( 64, 64 )
+hint_tooltip = "map"
+size_flags_vertical = 6
+texture_normal = ExtResource( 6 )
+expand = true
+
+[node name="setting2" type="TextureButton" parent="MarginContainer/HBoxContainer/VBoxContainer2/HBoxContainer"]
+margin_left = 136.0
+margin_right = 200.0
+margin_bottom = 64.0
+rect_min_size = Vector2( 64, 64 )
+hint_tooltip = "setting"
+size_flags_vertical = 6
+texture_normal = ExtResource( 13 )
+expand = true
+
+[node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer/HBoxContainer/VBoxContainer2"]
+margin_top = 68.0
+margin_right = 932.0
+margin_bottom = 132.0
+size_flags_horizontal = 7
+size_flags_vertical = 7
+
+[node name="Button" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer2/HBoxContainer2"]
+margin_right = 56.0
+margin_bottom = 64.0
+text = "enemy"
+flat = true
+
+[node name="Button2" type="Button" parent="MarginContainer/HBoxContainer/VBoxContainer2/HBoxContainer2"]
+margin_left = 60.0
+margin_right = 96.0
+margin_bottom = 64.0
+text = "buff"
+flat = true
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/HBoxContainer"]
+margin_left = 1080.0
+margin_right = 1280.0
+margin_bottom = 64.0
+size_flags_horizontal = 9
+size_flags_vertical = 2
+
+[node name="speed" type="TextureButton" parent="MarginContainer/HBoxContainer/HBoxContainer"]
+margin_right = 64.0
+margin_bottom = 64.0
+rect_min_size = Vector2( 64, 64 )
+hint_tooltip = "speed"
+texture_normal = ExtResource( 7 )
+expand = true
+
+[node name="map" type="TextureButton" parent="MarginContainer/HBoxContainer/HBoxContainer"]
+margin_left = 68.0
+margin_right = 132.0
+margin_bottom = 64.0
+rect_min_size = Vector2( 64, 64 )
+hint_tooltip = "map"
+texture_normal = ExtResource( 15 )
+expand = true
+
+[node name="setting" type="TextureButton" parent="MarginContainer/HBoxContainer/HBoxContainer"]
+margin_left = 136.0
+margin_right = 200.0
+margin_bottom = 64.0
+rect_min_size = Vector2( 64, 64 )
+hint_tooltip = "setting"
+texture_normal = ExtResource( 8 )
+expand = true
+
+[node name="TextureButton" type="TextureButton" parent="."]
+margin_left = 163.362
+margin_top = 534.107
+margin_right = 227.362
+margin_bottom = 598.107
+rect_min_size = Vector2( 64, 64 )
+texture_normal = ExtResource( 12 )
+expand = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="TextureButton2" type="TextureButton" parent="."]
+margin_left = 162.377
+margin_top = 610.0
+margin_right = 226.377
+margin_bottom = 674.0
+rect_min_size = Vector2( 64, 64 )
+texture_normal = ExtResource( 11 )
+expand = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Button3" type="Button" parent="."]
+margin_left = 1041.94
+margin_top = 534.434
+margin_right = 1120.94
+margin_bottom = 598.434
+text = "round_end"
+__meta__ = {
+"_edit_use_anchors_": false
+}
 
 [node name="Deck" parent="." instance=ExtResource( 4 )]
 position = Vector2( 1.7818, 472.176 )
@@ -33,15 +231,6 @@ script = ExtResource( 3 )
 placement = 6
 shuffle_style = 0
 faceup_cards = true
-
-[node name="Control" parent="DiscardPile" index="0"]
-custom_styles/panel = SubResource( 1 )
-
-[node name="Label" parent="DiscardPile/Control/CenterContainer" index="0"]
-margin_left = 43.0
-margin_right = 106.0
-custom_colors/font_color = Color( 1, 1, 1, 1 )
-text = "Discard"
 
 [node name="Hand" parent="." instance=ExtResource( 5 )]
 position = Vector2( 146.256, 479.395 )
@@ -58,17 +247,6 @@ __meta__ = {
 "_edit_use_anchors_": false
 }
 
-[node name="Control" type="Control" parent="."]
-margin_right = 1280.0
-margin_bottom = 720.0
-mouse_filter = 2
-__meta__ = {
-"_edit_use_anchors_": false
-}
-
-[node name="Container" parent="Control" instance=ExtResource( 6 )]
-mouse_filter = 2
-
 [node name="game_map" type="Node2D" parent="."]
 position = Vector2( 81.5787, 257.45 )
 
@@ -76,7 +254,7 @@ position = Vector2( 81.5787, 257.45 )
 position = Vector2( 8.48529, -59.397 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -85,7 +263,7 @@ __meta__ = {
 position = Vector2( 8.48529, 42.4264 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D2"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -94,7 +272,7 @@ __meta__ = {
 position = Vector2( 8.48529, 144.25 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D3"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -103,7 +281,7 @@ __meta__ = {
 position = Vector2( 110.309, -57.9828 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D4"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -112,7 +290,7 @@ __meta__ = {
 position = Vector2( 110.309, 43.8406 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D5"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -121,7 +299,7 @@ __meta__ = {
 position = Vector2( 110.309, 145.664 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D6"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -130,7 +308,7 @@ __meta__ = {
 position = Vector2( 212.132, -56.5685 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D7"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -139,7 +317,7 @@ __meta__ = {
 position = Vector2( 212.132, 45.2549 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D8"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -148,7 +326,7 @@ __meta__ = {
 position = Vector2( 212.132, 147.078 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D9"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -157,7 +335,7 @@ __meta__ = {
 position = Vector2( 315.476, -54.7867 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D10"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -166,7 +344,7 @@ __meta__ = {
 position = Vector2( 315.476, 47.0367 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D11"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -175,7 +353,7 @@ __meta__ = {
 position = Vector2( 315.476, 148.86 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D12"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -184,7 +362,7 @@ __meta__ = {
 position = Vector2( 771.095, -68.306 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D13"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -193,7 +371,7 @@ __meta__ = {
 position = Vector2( 771.095, 33.5174 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D14"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -202,7 +380,7 @@ __meta__ = {
 position = Vector2( 771.095, 135.341 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D15"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -211,7 +389,7 @@ __meta__ = {
 position = Vector2( 872.918, -66.8918 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D16"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -220,7 +398,7 @@ __meta__ = {
 position = Vector2( 872.918, 34.9316 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D17"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -229,7 +407,7 @@ __meta__ = {
 position = Vector2( 872.918, 136.755 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D18"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -238,7 +416,7 @@ __meta__ = {
 position = Vector2( 974.742, -65.4775 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D19"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -247,7 +425,7 @@ __meta__ = {
 position = Vector2( 974.742, 36.3459 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D20"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -256,7 +434,7 @@ __meta__ = {
 position = Vector2( 974.742, 138.169 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D21"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -265,7 +443,7 @@ __meta__ = {
 position = Vector2( 1078.09, -63.6957 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D22"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -274,7 +452,7 @@ __meta__ = {
 position = Vector2( 1078.09, 38.1277 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D23"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
@@ -283,10 +461,7 @@ __meta__ = {
 position = Vector2( 1078.09, 139.951 )
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="game_map/Area2D24"]
-shape = SubResource( 2 )
+shape = SubResource( 1 )
 __meta__ = {
 "_edit_lock_": true
 }
-[connection signal="toggled" from="Debug" to="." method="_on_Debug_toggled"]
-
-[editable path="DiscardPile"]
