@@ -23,7 +23,6 @@ extents = Vector2( 50, 50 )
 [node name="Board" type="Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_bottom = 6.10352e-05
 mouse_filter = 2
 script = ExtResource( 1 )
 __meta__ = {
@@ -249,9 +248,6 @@ margin_right = 93.0
 [node name="CardCount" parent="DiscardPile/Control/CenterContainer/VBoxContainer/PanelContainer/CenterContainer" index="0"]
 margin_left = 38.0
 margin_right = 54.0
-
-[node name="MarginContainer" parent="DiscardPile/Control/CenterContainer/VBoxContainer" index="2"]
-margin_right = 93.0
 
 [node name="Hand" parent="." instance=ExtResource( 5 )]
 position = Vector2( 146.256, 479.395 )
