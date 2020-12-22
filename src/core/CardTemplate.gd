@@ -23,7 +23,6 @@ enum CardState {
 	DROPPING_TO_BOARD		#6
 	ON_PLAY_BOARD			#7
 	FOCUSED_ON_BOARD		#8
-	DROPPING_INTO_PILE 		#9
 	IN_PILE					#10
 	IN_POPUP				#11
 	FOCUSED_IN_POPUP		#12
@@ -34,6 +33,7 @@ enum CardState {
 # before passing to the preload, or the parser complains.
 const _CARD_CHOICES_SCENE_FILE = CFConst.PATH_CORE + "CardChoices.tscn"
 const _CARD_CHOICES_SCENE = preload(_CARD_CHOICES_SCENE_FILE)
+
 
 # Emitted whenever the card is rotated
 # The signal must send its name as well (in the trigger var)
@@ -70,7 +70,8 @@ signal card_targeted(card,trigger,details)
 #
 # If we do, it is parsed by the compiler who then considers it
 # a cyclic reference as the scripting engine refers back to the Card class.
-var scripting_engine = load(CFConst.PATH_CORE + "ScriptingEngine.gd")
+var scripting_engine = load(CFConst.PATH_SCRIPTING_ENGINE)
+
 
 # The properties dictionary will be filled in by the setup() code
 # according to the card definintion.
@@ -100,8 +101,11 @@ export(int, 0, 270, 90) var card_rotation  := 0 setget set_card_rotation, get_ca
 export var card_name : String setget set_card_name, get_card_name
 # Contains the scene which has the Card Back design to use for this card type
 # It needs to be scene which uses a CardBack class script.
-export(PackedScene) var card_back_design = preload("res://src/custom/CardBack.tscn")
+export(PackedScene) var card_back_design : PackedScene
+export(PackedScene) var card_front_design : PackedScene
 
+# Ensures all nodes fit inside this rect.
+var card_size := CFConst.CARD_SIZE setget set_card_size
 # Starting state for each card
 var state : int = CardState.IN_PILE
 # If this card is hosting other cards,
@@ -126,29 +130,26 @@ var _potential_cards := []
 # We use this to track multiple [CardContainer]s
 # when our card is about to drop onto them
 var _potential_containers := []
-var _extra_text_shrink := 0.0
 
 # Used for picking a card to start the compiler on
 var _debugger_hook := false
 # Debug for stuck tweens
 var _tween_stuck_time = 0
-# Maps the location of the card front labels so that they're findable even when
-# The card front is customized for games of different needs
-# See _init_front_labels() to change the definition
-var _card_labels := {}
+
 # The node which has the design of the card back
 # And the methods which are used for its potential animation.
 # This will be loaded in `_init_card_back()`
 var card_back : CardBack
+var card_front : CardFront
+var _card_text
 
 onready var _tween = $Tween
 onready var _flip_tween = $Control/FlipTween
 onready var _control = $Control
-onready var _card_text = $Control/Front/Margin/CardText
 
 # The node which hosts all manipulation buttons belonging to this card
 # as well as methods to hide/show them, and connect them to this card.
-onready var buttons= $Control/ManipulationButtons
+onready var buttons = $Control/ManipulationButtons
 # The node which hosts all tokens belonging to this card
 # as well as the methods retrieve them and to to hide/show their drawer.
 onready var tokens = $Control/Tokens
@@ -160,27 +161,14 @@ onready var highlight = $Control/Highlight
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	set_card_size(card_size)
+	_init_card_layout()
 	# The below call ensures out card_name variable is set.
 	# Normally the setup() function should be used to set it,
 	# but setting the name here as well ensures that a card can be also put on
 	# The board without calling setup() and then use its hardcoded labels
-	_init_front_labels()
-	# This ensures card_name is set at the least based on its label or node name
-	# This allows a developer to create individual card instances and simply
-	# name their root node them after their card name,
-	# and the setup() will do the rest.
 	_init_card_name()
-	_init_card_back()
 	setup()
-	# First we set the card to always pivot from its center.
-	# We only rotate the Control node however, so the collision shape is not rotated
-	# Looking for a better solution, but this is the best I have until now.
-	$Control.rect_pivot_offset = $Control.rect_size/2
-	# We set the card's Highlight to always extend 3 pixels over
-	# Either side of the card. This way its border will appear
-	# correctly when hovering over the card.
-	highlight.rect_size = $Control.rect_size + Vector2(6,6)
-	highlight.rect_position = Vector2(-3,-3)
 	# warning-ignore:return_value_discarded
 	connect("area_entered", self, "_on_Card_area_entered")
 	# warning-ignore:return_value_discarded
@@ -190,40 +178,24 @@ func _ready() -> void:
 	cfc.signal_propagator.connect_new_card(self)
 
 
-func _init_card_back() -> void:
+func _init_card_layout() -> void:
 	# Because we duplicate the card when adding to the viewport focus
 	# It already has a CardBack node, so we don't want to replicate it
 	# so we only add a CardBack node, if we know it's not a dupe focus
 	if get_parent().name != "Viewport":
-		$Control/Back.add_child(card_back_design.instance())
-		card_back = $Control/Back/CardBack
+		var card_front_instance = card_front_design.instance()
+		$Control/Front.add_child(card_front_instance)
+		card_front = card_front_instance
+		var card_back_instance = card_back_design.instance()
+		$Control/Back.add_child(card_back_instance)
+		card_back = card_back_instance
 		$Control/Back.move_child(card_back,0)
 	# If it is a viewport focus dupe, we still need to setup the
 	# card_back variable, as the .duplicate() method does not copy
 	# internal variables.
 	else:
-		card_back = $Control/Back/CardBack
-
-
-# This function is used to map the card labels for all cards
-# If you create an instance of this CardTemplate and want to modify their position
-# You need to extend the Card class, and then override this function
-# With your own function defined in the new card type.
-# If you're just adding new labels, without modifying the existing ones
-# You can simply call `._init_front_labels()` from inside the new type
-# Then define your extra labels on top.
-
-
-func _init_front_labels() -> void:
-# Maps the location of the card front labels so that they're findable even when
-# The card front is customized for games of different needs
-	_card_labels["Name"] = $Control/Front/Margin/CardText/Name
-	_card_labels["Type"] = $Control/Front/Margin/CardText/Type
-	_card_labels["Tags"] = $Control/Front/Margin/CardText/Tags
-	_card_labels["Requirements"] = $Control/Front/Margin/CardText/Requirements
-	_card_labels["Abilities"] = $Control/Front/Margin/CardText/Abilities
-	_card_labels["Cost"] = $Control/Front/Margin/CardText/HB/Cost
-	_card_labels["Power"] = $Control/Front/Margin/CardText/HB/Power
+		card_back = $Control/Back.get_child(0)
+		card_front = $Control/Front.get_child(0)
 
 
 # Ensures that the canonical card name is set in all fields which use it.
@@ -232,8 +204,8 @@ func _init_card_name() -> void:
 	if not card_name:
 		# If the variable has not been set on start
 		# But the Name label has been set, we set our name to that instead
-		if _card_labels["Name"].text != "":
-			set_card_name(_card_labels["Name"].text)
+		if card_front.card_labels["Name"].text != "":
+			set_card_name(card_front.card_labels["Name"].text)
 		else:
 			# The node name changes depeding on how many other cards
 			# with the same node name are siblings
@@ -273,7 +245,6 @@ func _process(delta) -> void:
 			"DROPPING_TO_BOARD",
 			"ON_PLAY_BOARD",
 			"FOCUSED_ON_BOARD",
-			"DROPPING_INTO_PILE",
 			"IN_PILE",
 			"IN_POPUP",
 			"FOCUSED_IN_POPUP",
@@ -319,6 +290,7 @@ func _input(event) -> void:
 			$Control.set_default_cursor_shape(Input.CURSOR_ARROW)
 			cfc.card_drag_ongoing = null
 
+
 # A signal for whenever the player clicks on a card
 func _on_Card_gui_input(event) -> void:
 	if event is InputEventMouseButton:
@@ -346,6 +318,17 @@ func _on_Card_gui_input(event) -> void:
 				if state in [CardState.FOCUSED_IN_HAND,
 						CardState.FOCUSED_ON_BOARD,
 						CardState.FOCUSED_IN_POPUP]:
+					# See CFConst documentation.
+					if state == CardState.FOCUSED_IN_HAND \
+							and (CFConst.DISABLE_DRAGGING_FROM_HAND
+							or not check_play_costs()):
+						return
+					if state == CardState.FOCUSED_ON_BOARD \
+							and CFConst.DISABLE_DRAGGING_FROM_BOARD:
+						return
+					if state == CardState.FOCUSED_IN_POPUP \
+							and CFConst.DISABLE_DRAGGING_FROM_PILE:
+						return
 					# But first we check if the player does a long-press.
 					# We don't want to start dragging the card immediately.
 					cfc.card_drag_ongoing = self
@@ -410,36 +393,6 @@ func _on_Card_mouse_exited() -> void:
 		CardState.FOCUSED_IN_POPUP:
 			state = CardState.IN_POPUP
 
-# Hover button which rotates the card 90 degrees
-func _on_Rot90_pressed() -> void:
-# warning-ignore:return_value_discarded
-	set_card_rotation(90, true)
-
-
-# Hover button which rotates the card 180 degrees
-func _on_Rot180_pressed() -> void:
-# warning-ignore:return_value_discarded
-	set_card_rotation(180, true)
-
-
-# Hover button which flips the card facedown/faceup
-func _on_Flip_pressed() -> void:
-	# warning-ignore:return_value_discarded
-	set_is_faceup(not is_faceup)
-
-
-# Demo hover button which adds a selection of random tokens
-func _on_AddToken_pressed() -> void:
-	var valid_tokens := ['tech','gold coin','blood','plasma']
-	# warning-ignore:return_value_discarded
-	tokens.mod_token(valid_tokens[CFUtils.randi() % len(valid_tokens)], 1)
-
-
-# Hover button which allows the player to view a facedown card
-func _on_View_pressed() -> void:
-	# warning-ignore:return_value_discarded
-	set_is_viewed(true)
-
 
 # Triggers when a card hovers over another card while being dragged
 #
@@ -466,6 +419,10 @@ func _on_Card_area_entered(area: Area2D) -> void:
 	if area.get_class() == "CardContainer" \
 			and not area in _potential_containers \
 			and state == CardState.DRAGGED:
+		# If DISABLE_DROPPING_TO_CARDCONTAINERS is set to true, we still
+		# Allow the player to return the card where they got it.
+		if CFConst.DISABLE_DROPPING_TO_CARDCONTAINERS and area != get_parent():
+			return
 		var container = area
 		_potential_containers.append(container)
 		_potential_containers.sort_custom(CFUtils,"sort_card_containers")
@@ -503,7 +460,6 @@ func _on_Card_area_exited(area: Area2D) -> void:
 				_potential_containers)
 
 
-
 # This function handles filling up the card's labels according to its
 # card definition dictionary entry.
 func setup() -> void:
@@ -512,6 +468,7 @@ func setup() -> void:
 	# The properties of the card should be already stored in cfc
 	var read_properties = cfc.card_definitions.get(card_name, {})
 	for property in read_properties.keys():
+		# warning-ignore:return_value_discarded
 		modify_property(property,read_properties[property], true)
 
 
@@ -534,38 +491,60 @@ func modify_property(property: String, value, is_init = false, check := false) -
 			set_card_name(value)
 		elif not check:
 			properties[property] = value
-			var label_node = _card_labels[property]
-			if not is_init:
-				emit_signal("card_properties_modified",
-						self, "card_properties_modified",
-						{"property_name": property,
-						"new_property_value": value,
-						"previous_property_value": previous_value})
-			# These are int or float properties which need to be converted
-			# to a string with some formatting.
-			#
-			# In this demo, the format is defined as: "labelname: value"
-			if property in CardConfig.PROPERTIES_NUMBERS:
-				_set_label_text(label_node,property
-						+ ": " + str(value))
-			# These are arrays of properties which are put in a label with a simple
-			# Join character
-			elif property in CardConfig.PROPERTIES_ARRAYS:
-				_set_label_text(label_node,
-						CFUtils.array_join(value,
-						CFConst.ARRAY_PROPERTY_JOIN))
-			# These are standard properties which is simple a String to add to the
-			# label.text field
-			# Normally they should be defined in CardConfig.PROPERTIES_STRINGS
-			# but this is also the fallback we use for
-			# properties undefined in CardConfig
+			if not card_front.card_labels.has(property):
+				if not property.begins_with("_"):
+					print_debug("Warning: ", property,
+							" does not have a matching label!")
+				retcode = CFConst.ReturnCode.FAILED
 			else:
-				_set_label_text(label_node, str(value))
-				# If we have an empty property, we let the other labels
-				# use the space vertical space it would have taken.
-			if label_node.text == "" :
-				label_node.visible = false
+				var label_node = card_front.card_labels[property]
+				if not is_init:
+					emit_signal("card_properties_modified",
+							self, "card_properties_modified",
+							{"property_name": property,
+							"new_property_value": value,
+							"previous_property_value": previous_value})
+				# These are int or float properties which need to be converted
+				# to a string with some formatting.
+				#
+				# In this demo, the format is defined as: "labelname: value"
+				if property in CardConfig.PROPERTIES_NUMBERS:
+					card_front.set_label_text(label_node,property
+							+ ": " + str(value))
+				# These are arrays of properties which are put in a label
+				# with a simple join character
+				elif property in CardConfig.PROPERTIES_ARRAYS:
+					card_front.set_label_text(label_node,
+							CFUtils.array_join(value,
+							CFConst.ARRAY_PROPERTY_JOIN))
+				# These are standard properties which is simple a String to add to the
+				# label.text field
+				# Normally they should be defined in CardConfig.PROPERTIES_STRINGS
+				# but this is also the fallback we use for
+				# properties undefined in CardConfig
+				else:
+					card_front.set_label_text(label_node, str(value))
+					# If we have an empty property, we let the other labels
+					# use the space vertical space it would have taken.
+				if label_node.text == "" :
+					label_node.visible = false
 	return(retcode)
+
+
+func set_card_size(value: Vector2) -> void:
+	card_size = value
+	_control.rect_min_size = value
+	# We set the card to always pivot from its center.
+	_control.rect_pivot_offset = value/2
+	$Control/Back.rect_min_size = value
+	$Control/Front.rect_min_size = value
+	# We set the card's Highlight to always extend 3 pixels over
+	# Either side of the card. This way its border will appear
+	# correctly when hovering over the card.
+	highlight.rect_min_size = value + Vector2(6, 6)
+	highlight.rect_position = Vector2(-3, -3)
+	$CollisionShape2D.shape.extents = value / 2
+	$CollisionShape2D.position = value / 2
 
 
 # Setter for _is_attachment
@@ -670,7 +649,7 @@ func set_is_viewed(value: bool) -> int:
 				var dupe_back = cfc.NMAP.main._previously_focused_cards.back()\
 						.get_node("Control/Back")
 				_flip_card(dupe_back, dupe_front, true)
-			$Control/Back/VBoxContainer/CenterContainer/Viewed.visible = true
+			card_back.is_viewed_visible = true
 			retcode = CFConst.ReturnCode.CHANGED
 			# We only emit a signal when we view the card
 			# not when we unview it as that happens naturally
@@ -681,7 +660,7 @@ func set_is_viewed(value: bool) -> int:
 		elif is_faceup == true:
 			retcode = CFConst.ReturnCode.CHANGED
 			is_viewed = false
-			$Control/Back/VBoxContainer/CenterContainer/Viewed.visible = false
+			card_back.is_viewed_visible = false
 		else:
 			# We don't allow players to unview cards
 			retcode = CFConst.ReturnCode.FAILED
@@ -696,14 +675,14 @@ func get_is_viewed() -> bool:
 # Setter for card_name
 # Also changes the card label and the node name
 func set_card_name(value : String) -> void:
-	# if the _card_labels variable is not set it means ready() has not
+	# if the card_front.card_labels variable is not set it means ready() has not
 	# run yet, so we just store the card name for later.
-	if _card_labels.empty():
+	if not card_front:
 		card_name = value
 	else:
 		# We set all areas of the card to match the canonical name.
-		var name_label = _card_labels["Name"]
-		_set_label_text(name_label,value)
+		var name_label = card_front.card_labels["Name"]
+		card_front.set_label_text(name_label,value)
 		name = value
 		card_name = value
 		properties["Name"] = value
@@ -719,7 +698,7 @@ func get_card_name() -> String:
 # It's preferrable to set card_name instead.
 func set_name(value : String) -> void:
 	.set_name(value)
-	_card_labels["Name"].text = value
+	card_front.card_labels["Name"].text = value
 	card_name = value
 
 # Setter for card_rotation.
@@ -951,7 +930,7 @@ func move_to(targetHost,
 				var attach_index = current_host_card.attachments.find(self)
 				_target_position = (current_host_card.global_position
 						+ Vector2(0,(attach_index + 1)
-						* $Control.rect_size.y
+						* card_size.y
 						* CFConst.ATTACHMENT_OFFSET))
 			else:
 				_determine_target_position_from_mouse()
@@ -1113,7 +1092,7 @@ func attach_to_host(host: Card, is_following_previous_host = false) -> void:
 		var attach_index = current_host_card.attachments.find(self)
 		_target_position = (current_host_card.global_position
 				+ Vector2(0,(attach_index + 1)
-				* $Control.rect_size.y
+				* card_size.y
 				* CFConst.ATTACHMENT_OFFSET))
 		emit_signal("card_attached",
 				self,
@@ -1169,10 +1148,13 @@ func interruptTweening() ->void:
 
 # Changes card focus (highlighted and put on the focus viewport)
 func set_focus(requestedFocus: bool) -> void:
-	 # We use an if to avoid performing constant operations in _process
+	# We use an if to avoid performing constant operations in _process
+	# We only modify the highlight though, if the card is not being
+	# highlighted by another effect (such as a targetting arrow etc)
 	if highlight.visible != requestedFocus and \
-			highlight.modulate == CFConst.FOCUS_HOVER_COLOUR:
-		highlight.visible = requestedFocus
+			highlight.modulate in \
+			[CFConst.FOCUS_HOVER_COLOUR, CFConst.CANNOT_PAY_COST_COLOUR]:
+		highlight.set_highlight(requestedFocus,CFConst.FOCUS_HOVER_COLOUR)
 	if cfc.focus_style: # value 0 means only scaling focus
 		if requestedFocus:
 			cfc.NMAP.main.focus_card(self)
@@ -1245,7 +1227,7 @@ func animate_shuffle(anim_speed : float, style : int) -> void:
 	var pos_speed := anim_speed
 	var rot_speed := anim_speed
 	if style == CFConst.ShuffleStyle.CORGI:
-		csize = $Control.rect_size * 0.65
+		csize = card_size * 0.65
 		random_x = CFUtils.randf_range(- csize.x, csize.x)
 		random_y = CFUtils.randf_range(- csize.y, csize.y)
 		random_rot = CFUtils.randf_range(-20, 20)
@@ -1256,7 +1238,7 @@ func animate_shuffle(anim_speed : float, style : int) -> void:
 		rot_anim = Tween.TRANS_CIRC
 	# 2 is splash
 	elif style == CFConst.ShuffleStyle.SPLASH:
-		csize = $Control.rect_size * 0.85
+		csize = card_size * 0.85
 		random_x = CFUtils.randf_range(- csize.x, csize.x)
 		random_y = CFUtils.randf_range(- csize.y, csize.y)
 		random_rot = CFUtils.randf_range(-180, 180)
@@ -1267,15 +1249,15 @@ func animate_shuffle(anim_speed : float, style : int) -> void:
 		rot_anim = Tween.TRANS_CIRC
 		pos_speed = pos_speed
 	elif style == CFConst.ShuffleStyle.SNAP:
-		csize = $Control.rect_size
+		csize = card_size
 		center_card_pop_position.y = starting_card_position.y \
-				+ $Control.rect_size.y
+				+ card_size.y
 		start_pos_anim = Tween.TRANS_ELASTIC
 		end_pos_anim = Tween.TRANS_ELASTIC
 		rot_anim = null
 		pos_speed = pos_speed
 	elif style == CFConst.ShuffleStyle.OVERHAND:
-		csize = $Control.rect_size * 1.1
+		csize = card_size * 1.1
 		random_x = CFUtils.randf_range(- csize.x/10, csize.x/10)
 		random_y = CFUtils.randf_range(- csize.y, - csize.y/2)
 		random_rot = CFUtils.randf_range(-10, 10)
@@ -1295,6 +1277,19 @@ func animate_shuffle(anim_speed : float, style : int) -> void:
 	if rot_anim:
 		_add_tween_rotation(random_rot,0,rot_speed,rot_anim,Tween.EASE_IN)
 	_tween.start()
+
+
+# This function can be overriden by any class extending Card, in order to provide
+# a way of checking if a card can be played before dragging it out of the hand.
+#
+# This method will be called while the card is being focused by the player
+# If it returns true, the card will be highlighted as normal and the player
+# will be able to drag it out of the hand
+#
+# If it returns false, the card will be highlighted with a red tint, and the
+# player will not be able to drag it out of the hand.
+func check_play_costs() -> bool:
+	return(true)
 
 
 # Makes attachments always move with their parent around the board
@@ -1324,7 +1319,7 @@ func _organize_attachments() -> void:
 					[CardState.ON_PLAY_BOARD,CardState.FOCUSED_ON_BOARD]:
 				card.global_position = global_position + \
 						Vector2(0,(attach_index + 1) \
-						* $Control.rect_size.y \
+						* card_size.y \
 						* CFConst.ATTACHMENT_OFFSET)
 
 
@@ -1334,12 +1329,12 @@ func _organize_attachments() -> void:
 # Returns the adjusted global_mouse_position
 func _determine_board_position_from_mouse() -> Vector2:
 	var targetpos: Vector2 = cfc.NMAP.board.mouse_pointer.determine_global_mouse_pos()
-	if targetpos.x + $Control.rect_size.x * scale.x >= get_viewport().size.x:
-		targetpos.x = get_viewport().size.x - $Control.rect_size.x * scale.x
+	if targetpos.x + card_size.x * scale.x >= get_viewport().size.x:
+		targetpos.x = get_viewport().size.x - card_size.x * scale.x
 	if targetpos.x < 0:
 		targetpos.x = 0
-	if targetpos.y + $Control.rect_size.y * scale.y >= get_viewport().size.y:
-		targetpos.y = get_viewport().size.y - $Control.rect_size.y * scale.y
+	if targetpos.y + card_size.y * scale.y >= get_viewport().size.y:
+		targetpos.y = get_viewport().size.y - card_size.y * scale.y
 	if targetpos.y < 0:
 		targetpos.y = 0
 	return targetpos
@@ -1351,15 +1346,15 @@ func _determine_board_position_from_mouse() -> Vector2:
 func _determine_target_position_from_mouse() -> void:
 	_target_position = _determine_board_position_from_mouse()
 	# The below ensures the card doesn't leave the viewport dimentions
-	if _target_position.x + $Control.rect_size.x * CFConst.PLAY_AREA_SCALE.x \
+	if _target_position.x + card_size.x * CFConst.PLAY_AREA_SCALE.x \
 			> get_viewport().size.x:
 		_target_position.x = get_viewport().size.x \
-				- $Control.rect_size.x \
+				- card_size.x \
 				* CFConst.PLAY_AREA_SCALE.x
-	if _target_position.y + $Control.rect_size.y * CFConst.PLAY_AREA_SCALE.y \
+	if _target_position.y + card_size.y * CFConst.PLAY_AREA_SCALE.y \
 			> get_viewport().size.y:
 		_target_position.y = get_viewport().size.y \
-				- $Control.rect_size.y \
+				- card_size.y \
 				* CFConst.PLAY_AREA_SCALE.y
 
 
@@ -1456,16 +1451,6 @@ func _clear_attachment_status() -> void:
 # Returns true if the mouse is hovering over the card, else false
 func _is_card_hovered() -> bool:
 	var ret = false
-#	if (cfc.NMAP.board.mouse_pointer.determine_global_mouse_pos().x
-#			>= $Control.rect_global_position.x and
-#			cfc.NMAP.board.mouse_pointer.determine_global_mouse_pos().y
-#			>= $Control.rect_global_position.y and
-#			cfc.NMAP.board.mouse_pointer.determine_global_mouse_pos().x
-#			<= $Control.rect_global_position.x
-#			+ $Control.rect_size.x and
-#			cfc.NMAP.board.mouse_pointer.determine_global_mouse_pos().y
-#			<= $Control.rect_global_position.y
-#			+ $Control.rect_size.y):
 	if cfc.NMAP.board.mouse_pointer in get_overlapping_areas():
 		ret = true
 	#print(ret)
@@ -1616,6 +1601,8 @@ func _process_card_state() -> void:
 			# always over its neighbours
 			z_index = 1
 			set_focus(true)
+			if not check_play_costs():
+				highlight.set_highlight(true,CFConst.CANNOT_PAY_COST_COLOUR)
 			set_control_mouse_filters(true)
 			buttons.set_active(false)
 			# warning-ignore:return_value_discarded
@@ -1649,23 +1636,18 @@ func _process_card_state() -> void:
 					if not c in neighbours and c != self:
 						c.interruptTweening()
 						c.reorganize_self()
-				# When zooming in, we also want to move the card higher,
-				# so that it's not under the screen's bottom edge.
-				# We multiple with 0.25 to offset the increase in size
-				# due to the 1.5 scale coming later.
-				var oval_offset = 0.0
-				# The below calculation ensures that rotated cards
-				# Don't raise too much over the hand location, causing the card
-				# focus to spazz-out.
-				# This needs to be improved, as the multiplier needs to be
-				# based on the angle somehow.
-				if cfc.hand_use_oval_shape:
-					oval_offset = (90 - abs(_recalculate_rotation())) * 0.75
 				_target_position = expected_position \
-						- Vector2($Control.rect_size.x \
-						* 0.25,$Control.rect_size.y \
-						* 0.5 + cfc.NMAP.hand.bottom_margin \
-						- oval_offset)
+						- Vector2(card_size.x \
+						* 0.25,0)
+				# Enough with the fancy calculations. I'm just brute-forcing
+				# The card to stay at the fully within the viewport.
+				while cfc.NMAP.hand.position.y \
+					+ cfc.NMAP.hand.bottom_margin \
+					+ _target_position.y \
+					+ card_size.y > get_viewport().size.y:
+					_target_position.y -= 1
+				# We need to bump up the y postion a bit based on the rotation
+				# We subtract 13 if there is no rotation
 				_target_rotation = expected_rotation
 				# We make sure to remove other tweens of the same type
 				# to avoid a deadlock
@@ -1706,7 +1688,7 @@ func _process_card_state() -> void:
 					if get_parent() != cfc.NMAP.board:
 						# We determine its center position on the viewport
 						var controlNode_center_position := \
-								Vector2(global_position + $Control.rect_size/2)
+								Vector2(global_position + card_size/2)
 						# We then direct this position towards the viewport center
 						# If we are to the left/top of viewport center,
 						# we offset towards the right/bottom (+offset)
@@ -1724,9 +1706,9 @@ func _process_card_state() -> void:
 						# We always offset by percentages of the card size to
 						# be consistent in case the card size changes
 						var offset_x = (abs(controlNode_center_position.x
-								- get_viewport().size.x/2)) / 250 * $Control.rect_size.x
+								- get_viewport().size.x/2)) / 250 * card_size.x
 						var offset_y = (abs(controlNode_center_position.y
-								- get_viewport().size.y/2)) / 250 * $Control.rect_size.y
+								- get_viewport().size.y/2)) / 250 * card_size.y
 						var inter_x = controlNode_center_position.x \
 								+ direction_x * offset_x
 						var inter_y = controlNode_center_position.y \
@@ -1837,10 +1819,10 @@ func _process_card_state() -> void:
 				$Tween.remove(self,'position') # We make sure to remove other tweens of the same type to avoid a deadlock
 #				_target_position = _determine_board_position_from_mouse()
 #				# The below ensures the card doesn't leave the viewport dimentions
-#				if _target_position.x + $Control.rect_size.x * CFConst.PLAY_AREA_SCALE.x > get_viewport().size.x:
-#					_target_position.x = get_viewport().size.x - $Control.rect_size.x * CFConst.PLAY_AREA_SCALE.x
-#				if _target_position.y + $Control.rect_size.y * CFConst.PLAY_AREA_SCALE.y > get_viewport().size.y:
-#					_target_position.y = get_viewport().size.y - $Control.rect_size.y * CFConst.PLAY_AREA_SCALE.y
+#				if _target_position.x + card_size.x * CFConst.PLAY_AREA_SCALE.x > get_viewport().size.x:
+#					_target_position.x = get_viewport().size.x - card_size.x * CFConst.PLAY_AREA_SCALE.x
+#				if _target_position.y + card_size.y * CFConst.PLAY_AREA_SCALE.y > get_viewport().size.y:
+#					_target_position.y = get_viewport().size.y - card_size.y * CFConst.PLAY_AREA_SCALE.y
 				_add_tween_position(position, _target_position, 0.25)
 				# The below ensures a card dropped from the hand will not
 				# retain a slight rotation.
@@ -1909,11 +1891,6 @@ func _process_card_state() -> void:
 			if not is_faceup:
 				if is_viewed:
 					_flip_card($Control/Back,$Control/Front, true)
-				else:
-					# We slightly reduce the colour intensity of the dupe
-					# As its enlarged state makes it glow too much
-					var current_colour = card_back.modulate
-					card_back.modulate = current_colour * 0.95
 
 
 # Get the angle on the ellipse
@@ -1924,10 +1901,9 @@ func _get_angle_by_index(index_diff = null) -> float:
 	# reported when it's being dragged
 	if hand_size == 0:
 		hand_size = 1
-	var half
-	half = (hand_size - 1) / 2.0
+	var half = (hand_size - 1) / 2.0
 	var card_angle_max: float = 15
-	var card_angle_min: float = 5
+	var card_angle_min: float = 6.5
 	# Angle between cards
 	var card_angle = max(min(60 / hand_size, card_angle_max), card_angle_min)
 	# When foucs hand, the card needs to be offset by a certain angle
@@ -1986,9 +1962,9 @@ func _recalculate_position_use_oval(index_diff = null)-> Vector2:
 			- ver_rad * sin(rad_angle))
 	# Take the center point of the card as the starting point, the coordinates
 	# of the top left corner of the card
-	var left_top = Vector2(- $Control.rect_size.x/2, - $Control.rect_size.y/2)
+	var left_top = Vector2(- card_size.x/2, - card_size.y/2)
 	# Place the top center of the card on the oval point
-	var center_top = Vector2(0, - $Control.rect_size.y/2)
+	var center_top = Vector2(0, - card_size.y/2)
 	# Get the angle of the card, which is different from the oval angle,
 	# the card angle is the normal angle of a certain point
 	var card_angle = _get_oval_angle_by_index(angle, null, hor_rad,ver_rad)
@@ -2019,17 +1995,17 @@ func _recalculate_position_use_rectangle(index_diff = null)-> Vector2:
 	var max_hand_size_width: float = parent_control.rect_size.x
 	# The maximum distance between cards
 	# We base it on the card width to allow it to work with any card-size.
-	var card_gap_max: float = $Control.rect_size.x * 1.1
+	var card_gap_max: float = card_size.x * 1.1
 	# The minimum distance between cards
 	# (less than card width means they start overlapping)
-	var card_gap_min: float = $Control.rect_size.x/2
+	var card_gap_min: float = card_size.x/2
 	# The current distance between cards.
 	# It is inversely proportional to the amount of cards in hand
 	var cards_gap: float = max(min((max_hand_size_width
-			- $Control.rect_size.x/2)
+			- card_size.x/2)
 			/ hand_size, card_gap_max), card_gap_min)
 	# The current width of all cards in hand together
-	var hand_width: float = (cards_gap * (hand_size-1)) + $Control.rect_size.x
+	var hand_width: float = (cards_gap * (hand_size-1)) + card_size.x
 	# The following just create the vector position to place this specific card
 	# in the playspace.
 	card_position_x = (max_hand_size_width/2
@@ -2041,7 +2017,7 @@ func _recalculate_position_use_rectangle(index_diff = null)-> Vector2:
 	card_position_y = 0
 	if index_diff!=null:
 		return(Vector2(card_position_x, card_position_y)
-				+ Vector2($Control.rect_size.x / index_diff * CFConst.NEIGHBOUR_PUSH, 0))
+				+ Vector2(card_size.x / index_diff * CFConst.NEIGHBOUR_PUSH, 0))
 	else:
 		return(Vector2(card_position_x,card_position_y))
 
@@ -2053,55 +2029,6 @@ func _recalculate_rotation(index_diff = null)-> float:
 		calculated_rotation = 90.0 - _get_oval_angle_by_index(null, index_diff)
 	return(calculated_rotation)
 
-
-# Set a label node's text.
-# As the string becomes longer, the font size becomes smaller
-func _set_label_text(node: Label, value):
-	# We do not want some fields, like the name, to be too small.
-	# see CardConfig.TEXT_EXPANSION_MULTIPLIER documentation
-	var allowed_expansion = CardConfig.TEXT_EXPANSION_MULTIPLIER.get(node.name,1)
-	var shrink_size : float
-	# If this node is the specified node that compensates for other nodes
-	# increasing their y-rect, then it has less y-space for itself according
-	# to the amount the others increased.
-	if node.name in CardConfig.SHRINK_LABEL:
-		shrink_size = _extra_text_shrink
-	var label_size = node.rect_min_size
-	var label_font = node.get("custom_fonts/font").duplicate()
-	var line_height = label_font.get_height()
-	# line_spacing should be calculated into rect_size
-	var line_spacing = node.get("custom_constants/line_spacing")
-	if not line_spacing:
-		line_spacing = 3
-	# This calculates the amount of vertical pixels the text would take
-	# once it was word-wrapped.
-	var label_rect_y = label_font.get_wordwrap_string_size(
-			value, label_size.x).y \
-			/ line_height \
-			* (line_height + line_spacing) \
-			- line_spacing
-	# If the y-size of the wordwrapped text would be bigger than the current
-	# available y-size foir this label, we reduce the text, until we
-	# it's small enough to stay within the boundaries
-	while label_rect_y > label_size.y * allowed_expansion - shrink_size:
-		label_font.size = label_font.size - 1
-		if label_font.size < 3:
-			label_font.size = 2
-			break
-		label_rect_y = label_font.get_wordwrap_string_size(
-				value,label_size.x).y \
-				/ line_height \
-				* (line_height + line_spacing) \
-				- line_spacing
-	# If we allowed the card to expand its initial rect_size.y
-	# we need to compensate somewhere by reducing another label's size.
-	# We store the amount we increased in size from the
-	# initial amount,m for this purpose.
-	if label_rect_y > label_size.y:
-		_extra_text_shrink = label_rect_y - label_size.y
-	node.set("custom_fonts/font", label_font)
-	node.rect_min_size = label_size
-	node.text = value
 
 
 # Ensures that all filters requested by the script are respected
@@ -2120,3 +2047,13 @@ func _filter_signal_trigger(card_scripts, trigger_card: Card) -> bool:
 	if trigger == "another" and trigger_card == self:
 		is_valid = false
 	return(is_valid)
+
+
+func _on_Back_resized() -> void:
+	# This looks like a Godot bug. I'm leaving it here in case I can track it later
+	# It only happens if "card.set_is_faceup(false,true)" in CGFBoard.tcsn
+	# At the loop at line 91, is active
+	if $Control/Back.rect_size != CFConst.CARD_SIZE:
+		pass
+		print_debug($Control/Back.rect_size) # Replace with function body.
+

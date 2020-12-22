@@ -9,7 +9,9 @@ func after_all():
 	cfc.fancy_movement = true
 
 func before_each():
-	setup_board()
+	var confirm_return = setup_board()
+	if confirm_return is GDScriptFunctionState: # Still working.
+		confirm_return = yield(confirm_return, "completed")
 
 func test_get_card_methods():
 	var pile : Pile = cfc.NMAP.deck
@@ -23,3 +25,9 @@ func test_get_card_methods():
 			"get_all_cards() works without anything in viewpile")
 	pending("Card has to be facedown when moved into pile")
 	pending("Card has to be faceup when viewed in popup")
+
+func test_set_pile_name():
+	var pile : Pile = cfc.NMAP.discard
+	pile.pile_name = "GUT Test"
+	assert_eq(pile.pile_name, pile.pile_name_label.text,
+			"Label is renamed whe pile_name changes")

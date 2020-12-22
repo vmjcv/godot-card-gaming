@@ -9,7 +9,9 @@ func after_all():
 	cfc.fancy_movement = true
 
 func before_each():
-	setup_board()
+	var confirm_return = setup_board()
+	if confirm_return is GDScriptFunctionState: # Still working.
+		confirm_return = yield(confirm_return, "completed")
 	cards = draw_test_cards(5)
 	yield(yield_for(1), YIELD)
 
@@ -18,14 +20,13 @@ func test_targetting():
 	var card: Card
 	card = cards[0]
 	card.targeting_arrow.initiate_targeting()
-	board._UT_interpolate_mouse_move(cards[4].global_position,card.global_position,3)
-	yield(yield_for(0.6), YIELD)
+	yield(move_mouse(cards[4].global_position), 'completed')
 	assert_lt(0,card.get_node("TargetLine").get_point_count( ),
 			"test that TargetLine has length higher than 1 while active")
 	assert_true(card.get_node("TargetLine/ArrowHead").visible,
 			"test that arrowhead is visible on once active")
 	assert_true(cards[4].highlight.visible,
-			"Test that a card hovering over another with attachment flag on, highlights it")
+			"Test that a target arrow hovering over another card, highlights it")
 	assert_eq(cards[4].highlight.modulate, CFConst.TARGET_HOVER_COLOUR,
 			"Test that a hovered target has the right colour highlight")
 	card.targeting_arrow.complete_targeting()

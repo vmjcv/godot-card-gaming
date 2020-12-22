@@ -3,9 +3,6 @@
 class_name CardContainer
 extends Area2D
 
-# Cache control button
-var all_manipulation_buttons := [] setget ,get_all_manipulation_buttons
-
 # The various automatic Anchors possible for a CardContainer
 # NONE means the container will not stay anchored to the screen
 # and will not adjust its position if the viewport changes.
@@ -66,7 +63,12 @@ func _process(_delta: float) -> void:
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
+	cfc.map_node(self)
+	# We use the below while to wait until all the nodes we need have been mapped
+	# "hand" should be one of them.
 	add_to_group("card_containers")
+	if not cfc.are_all_nodes_mapped:
+		yield(cfc, "all_nodes_mapped")
 	_init_ui()
 	_init_signal()
 
@@ -85,7 +87,7 @@ func _init_signal() -> void:
 	# warning-ignore:return_value_discarded
 	control.connect("mouse_exited", self, "_on_Control_mouse_exited")
 	# warning-ignore:return_value_discarded
-	for button in all_manipulation_buttons:
+	for button in get_all_manipulation_buttons():
 		button.connect("mouse_entered", self, "_on_button_mouse_entered")
 		#button.connect("mouse_exited", self, "_on_button_mouse_exited")
 	shuffle_button.connect("pressed", self, '_on_Shuffle_Button_pressed')
@@ -110,7 +112,7 @@ func _on_Control_mouse_entered() -> void:
 func _on_button_mouse_entered() -> void:
 	# We stop ongoing animations to avoid conflicts.
 	manipulation_buttons_tween.remove_all()
-	for button in all_manipulation_buttons:
+	for button in get_all_manipulation_buttons():
 		button.modulate[3] = 1
 
 
@@ -131,7 +133,7 @@ func _on_viewport_resized() -> void:
 func hide_buttons() -> void:
 	# We stop existing tweens to avoid deadlocks
 	manipulation_buttons_tween.remove_all()
-	for button in all_manipulation_buttons:
+	for button in get_all_manipulation_buttons():
 		manipulation_buttons_tween.interpolate_property(button, 'modulate:a',
 				button.modulate.a, 0, 0.25,
 				Tween.TRANS_SINE, Tween.EASE_IN)
@@ -141,7 +143,7 @@ func hide_buttons() -> void:
 # Shows manipulation buttons
 func show_buttons() -> void:
 	manipulation_buttons_tween.remove_all()
-	for button in all_manipulation_buttons:
+	for button in get_all_manipulation_buttons():
 		manipulation_buttons_tween.interpolate_property(button, 'modulate:a',
 				button.modulate.a, 1, 0.25,
 				Tween.TRANS_SINE, Tween.EASE_IN)
@@ -154,11 +156,11 @@ func show_buttons() -> void:
 # By using group, different tree structures are allowed
 func get_all_manipulation_buttons() -> Array:
 	var buttons = get_tree().get_nodes_in_group("manipulation_button")
-	all_manipulation_buttons.clear()
+	var my_buttons = []
 	for button in buttons:
 		if is_a_parent_of(button):
-			all_manipulation_buttons.append(button)
-	return all_manipulation_buttons
+			my_buttons.append(button)
+	return my_buttons
 
 
 # Overrides the built-in get_class to return "CardContainer" instead of "Area2D"
@@ -274,12 +276,12 @@ func re_place():
 			# Right position always start from the right-side of the viewport
 			# minus the width of the container
 			Anchors.TOP_RIGHT, Anchors.RIGHT_MIDDLE, Anchors.BOTTOM_RIGHT:
-				place.x = get_viewport().size.x - $Control.rect_size.x
+				place.x = get_viewport().size.x - CFConst.CARD_SIZE.x
 				add_to_group("right")
 			# Middle placement is the middle of the viewport width,
 			# minues half the height of the container
 			Anchors.TOP_MIDDLE, Anchors.BOTTOM_MIDDLE:
-				place.x = get_viewport().size.x / 2 - $Control.rect_size.x / 2
+				place.x = get_viewport().size.x / 2 - CFConst.CARD_SIZE.x / 2
 		# Now we adjust the y position. Same logic for
 		match placement:
 			# Top position always start from y == 0,
@@ -290,12 +292,12 @@ func re_place():
 			# Bottom position always start from the bottom of the viewport
 			# minus the height of the container
 			Anchors.BOTTOM_LEFT, Anchors.BOTTOM_MIDDLE, Anchors.BOTTOM_RIGHT:
-				place.y = get_viewport().size.y - $Control.rect_size.y
+				place.y = get_viewport().size.y - CFConst.CARD_SIZE.y
 				add_to_group("bottom")
 			# Middle placement is the middle of the viewport height
 			# minus half the height of the container
 			Anchors.RIGHT_MIDDLE, Anchors.LEFT_MIDDLE:
-				place.y = get_viewport().size.y / 2 - $Control.rect_size.y / 2
+				place.y = get_viewport().size.y / 2 - CFConst.CARD_SIZE.y / 2
 		# Now we try to discover if more than one CardContainer share
 		# the same anchor and the figure out which to displace.
 		var duplicate_anchors := {}

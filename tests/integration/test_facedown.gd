@@ -9,7 +9,9 @@ func after_all():
 	cfc.fancy_movement = true
 
 func before_each():
-	setup_main()
+	var confirm_return = setup_main()
+	if confirm_return is GDScriptFunctionState: # Still working.
+		confirm_return = yield(confirm_return, "completed")
 	cards = draw_test_cards(5)
 	yield(yield_for(1), YIELD)
 
@@ -57,7 +59,7 @@ func test_board_facedown():
 	var dupe_back
 	dupe_back = dupe.get_node("Control/Back")
 	var view_button  = card.get_node("Control/ManipulationButtons/View")
-	var viewed_icon  = card.get_node("Control/Back/VBoxContainer/CenterContainer/Viewed")
+	var viewed_icon  = card.card_back.viewed_node
 	card.is_faceup = false
 	yield(yield_to(card._flip_tween, "tween_all_completed", 1), YIELD)
 	assert_false(dupe_front.visible,

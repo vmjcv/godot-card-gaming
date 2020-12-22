@@ -1,15 +1,43 @@
 # Changelog
 
+## 1.3 (Ongoing)
+
+### New Features
+
+* Refactoring was done so that the Framework is easier to upgrade to a newer version by simply overwritting the `res://src/core` folder with the newer version
+  * Moved CFConst to `res://src/custom` which is not meant to be overwritten. This will ensure tweaks to the way the engine works will remain after an upgrade.
+  * Main.tcsn now doesn't have the board scene instanced directly. Rather you specify the board scene via an exported variable. 
+	This allows developers to create a new inherited Main.tcsn scene and set it to load their own custom board scene. This in turn allows a developer to upgrade their Main.tcsn in `res://src/core` and take advantage of any upgrades, while not losing their own customizations
+  * Moved Card Front to its own instance, with a same method used for card back. Now inherited card scenes from CardTemplate can have radically different Front layout from each other.
+  * Moved Manipulation buttons to code, instanced from a single button scene. Code exists inside ManipulationButtons class and can be overriden by any card that uses its own script to extend it.
+  * Developers can now also specify the Scripting Engine location inside CFConst. This will allow them to extend its functionality with more tasks, specific to their game.
+* Can now define global CARD_SIZE to CFConst. Now you can change card size globally and all cardcontainers will also adjust their size accordingly. 
+* Developers do not need to define critical node locations in CFConst anymore.
+* Made it easier for other devs to extend the ScriptingEngine
+* Added configuration option that selectively disables drag or drop.
+* Added overridable function `check_play_costs()` which can determine on runtime is costs can be paid, and allow the card to be dragged from hand
+
 ## 1.2
 
 ### New Features
 
 * Pile name and card count will be displayed. Possibility to add an image or colour to the pile which will not be shown when there's cards inside.
+* Added new card back that meets proper gambling symmetry rules.  - Contribution by [@zombieCraig](https://github.com/zombieCraig).
+* A pile can now be renamed from the editor properties, instead of having to edit node properties and look for the label. - Contribution by [@zombieCraig](https://github.com/zombieCraig).
 
 ### Tweaks
 
 * Card Back scene has to be defined in the new card_back_design exported variable. You have to select the scene you want from for each different card type (assuming they're using a different one)
 * Switched BoardTemplate to expect Control instead of Node2D, to allow potential GUI elements to orient themselves easier.
+* Card back now can include the "Viewed" node in in any form they wish.
+	The function set_is_viewed() will handle setting the viewed node to visible or not.
+	if another method to show viewed has been setup for this card back, then the set_is_viewed() function can be overriden.
+
+
+### Bugfixes
+
+* Card properties will now properly ignore properties defined with _underscore in the name start.
+	If the property's label is missing and the property does not start with an underscore, the framework will print out an error. - Contribution by [@zombieCraig](https://github.com/zombieCraig).
 
 ## 1.1
 
