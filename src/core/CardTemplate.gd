@@ -651,7 +651,7 @@ func set_is_faceup_2d(value: bool, instant := false, check := false) -> int:
 					var dupe_card = cfc.NMAP.main._previously_focused_cards.back()
 					var dupe_front = dupe_card.get_node("Control/Front")
 					var dupe_back = dupe_card.get_node("Control/Back")
-					_flip_card(dupe_front, dupe_back, true)
+					_flip_card_2d(dupe_front, dupe_back, true)
 		retcode = CFConst.ReturnCode.CHANGED
 		emit_signal("card_flipped", self, "card_flipped", {"is_faceup": value})
 	# If we're doing a check, then we just report CHANGED.
@@ -1764,7 +1764,7 @@ func _is_card_hovered() -> bool:
 # so that the correct Panel (Card Back or Card Front) and children is visible
 #
 # It also pretends to flip the highlight, otherwise it looks fake.
-func _flip_card(to_invisible: Control, to_visible: Control, instant := false) -> void:
+func _flip_card_2d(to_invisible: Control, to_visible: Control, instant := false) -> void:
 	if instant:
 		to_visible.visible = true
 		to_visible.rect_scale.x = 1

@@ -49,6 +49,11 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://src/core/CardTemplate.gd"
 }, {
+"base": "TextureRect",
+"class": "Card3d",
+"language": "GDScript",
+"path": "res://src/core/Card3d/Card3d.gd"
+}, {
 "base": "Panel",
 "class": "CardBack",
 "language": "GDScript",
@@ -178,6 +183,7 @@ _global_script_class_icons={
 "CFControl": "",
 "CFUtils": "",
 "Card": "",
+"Card3d": "",
 "CardBack": "",
 "CardBackGlow": "",
 "CardBackTexture": "",
