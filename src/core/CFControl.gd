@@ -24,6 +24,7 @@ var focus_style := CFConst.FOCUS_STYLE
 # horizontally aligned
 var hand_use_oval_shape := CFConst.HAND_USE_OVAL_SHAPE
 
+var card_use_3d := CFConst.CARD_USE_3D
 #-----------------------------------------------------------------------------
 # END Control Variables
 #-----------------------------------------------------------------------------

@@ -13,6 +13,7 @@ func _ready() -> void:
 	# Discard pile goes bottom right
 	$FancyMovementToggle.pressed = cfc.fancy_movement
 	$OvalHandToggle.pressed = cfc.hand_use_oval_shape
+	$Card3dToggle.pressed = cfc.card_use_3d
 	$ScalingFocusOptions.selected = cfc.focus_style
 	$Debug.pressed = cfc._debug
 	# Fill up the deck for demo purposes
@@ -36,6 +37,14 @@ func _on_OvalHandToggle_toggled(_button_pressed: bool) -> void:
 	cfc.hand_use_oval_shape = $OvalHandToggle.pressed
 	for c in cfc.NMAP.hand.get_all_cards():
 		c.reorganize_self()
+
+
+
+func _on_Card3dToggle_toggled(button_pressed):
+	cfc.card_use_3d = $Card3dToggle.pressed
+#	for c in cfc.NMAP.hand.get_all_cards():
+#		c.reorganize_self()
+
 
 
 # Reshuffles all Card objects created back into the deck

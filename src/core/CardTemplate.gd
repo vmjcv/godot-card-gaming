@@ -126,6 +126,7 @@ export var card_name : String setget set_card_name, get_card_name
 # It needs to be scene which uses a CardBack class script.
 export(PackedScene) var card_back_design : PackedScene
 export(PackedScene) var card_front_design : PackedScene
+export(PackedScene) var card_model_design : PackedScene
 # If true, the player will not be able to drop dragged cards back into
 # CardContainers. The player will only be allowed to drop cards to the board
 # or back into the container they picked them front
@@ -200,6 +201,7 @@ var _tween_stuck_time = 0
 # This will be loaded in `_init_card_back()`
 var card_back : CardBack
 var card_front : CardFront
+var card_model : Card3d
 var _card_text
 
 onready var _tween = $Tween
@@ -232,7 +234,17 @@ func _ready() -> void:
 	$Control.connect("gui_input", self, "_on_Card_gui_input")
 	cfc.signal_propagator.connect_new_card(self)
 
+
 func _init_card_layout() -> void:
+	if cfc.card_use_3d:
+		_init_card_layout_2d()
+		_init_card_layout_3d()
+	else:
+		_init_card_layout_2d()
+		_init_card_layout_3d()
+		
+
+func _init_card_layout_2d() -> void:
 	# Because we duplicate the card when adding to the viewport focus
 	# It already has a CardBack node, so we don't want to replicate it
 	# so we only add a CardBack node, if we know it's not a dupe focus
@@ -244,6 +256,7 @@ func _init_card_layout() -> void:
 		$Control/Back.add_child(card_back_instance)
 		card_back = card_back_instance
 		$Control/Back.move_child(card_back,0)
+
 	# If it is a viewport focus dupe, we still need to setup the
 	# card_back variable, as the .duplicate() method does not copy
 	# internal variables.
@@ -251,6 +264,20 @@ func _init_card_layout() -> void:
 		card_back = $Control/Back.get_child(0)
 		card_front = $Control/Front.get_child(0)
 
+func _init_card_layout_3d() -> void:
+	# Because we duplicate the card when adding to the viewport focus
+	# It already has a CardBack node, so we don't want to replicate it
+	# so we only add a CardBack node, if we know it's not a dupe focus
+	if get_parent().name != "Viewport":
+		var card_model_instance = card_model_design.instance()
+		$Control/Model.add_child(card_model_instance)
+		card_model = card_model_instance
+
+	# If it is a viewport focus dupe, we still need to setup the
+	# card_back variable, as the .duplicate() method does not copy
+	# internal variables.
+	else:
+		card_model = $Control/Model.get_child(0)
 
 # Ensures that the canonical card name is set in all fields which use it.
 #  var card_name, "Name" label and self.name should use the same string.
@@ -562,13 +589,19 @@ func set_is_attachment(value: bool) -> void:
 func get_is_attachment() -> bool:
 	return is_attachment
 
+func set_is_faceup(value: bool, instant := false, check := false) -> int:
+	if cfc.card_use_3d:
+		return set_is_faceup_3d(value,instant,check)
+	else:
+		return set_is_faceup_2d(value,instant,check)
+
 # Setter for is_faceup
 #
 # Flips the card face-up/face-down
 #
 # * Returns CFConst.ReturnCode.CHANGED if the card actually changed rotation
 # * Returns CFConst.ReturnCode.OK if the card was already in the correct rotation
-func set_is_faceup(value: bool, instant := false, check := false) -> int:
+func set_is_faceup_2d(value: bool, instant := false, check := false) -> int:
 	var retcode: int
 	if value == is_faceup:
 		retcode = CFConst.ReturnCode.OK
@@ -583,7 +616,7 @@ func set_is_faceup(value: bool, instant := false, check := false) -> int:
 		if set_is_viewed(false) == CFConst.ReturnCode.FAILED:
 			print("ERROR: Something went unexpectedly in set_is_faceup")
 		if value:
-			_flip_card($Control/Back, $Control/Front,instant)
+			_flip_card_2d($Control/Back, $Control/Front,instant)
 			# We need this check, as this node might not be ready
 			# Yet when a viewport focus dupe is instancing
 			buttons.set_button_visible("View", false)
@@ -601,9 +634,9 @@ func set_is_faceup(value: bool, instant := false, check := false) -> int:
 					var dupe_card = cfc.NMAP.main._previously_focused_cards.back()
 					var dupe_front = dupe_card.get_node("Control/Front")
 					var dupe_back = dupe_card.get_node("Control/Back")
-					_flip_card(dupe_back, dupe_front, true)
+					_flip_card_2d(dupe_front, dupe_back, true)
 		else:
-			_flip_card($Control/Front, $Control/Back,instant)
+			_flip_card_2d($Control/Front, $Control/Back,instant)
 			buttons.set_button_visible("View", true)
 #			if get_parent() == cfc.NMAP.board:
 			card_back.start_card_back_animation()
@@ -619,6 +652,71 @@ func set_is_faceup(value: bool, instant := false, check := false) -> int:
 					var dupe_front = dupe_card.get_node("Control/Front")
 					var dupe_back = dupe_card.get_node("Control/Back")
 					_flip_card(dupe_front, dupe_back, true)
+		retcode = CFConst.ReturnCode.CHANGED
+		emit_signal("card_flipped", self, "card_flipped", {"is_faceup": value})
+	# If we're doing a check, then we just report CHANGED.
+	else:
+		retcode = CFConst.ReturnCode.CHANGED
+	return retcode
+
+
+
+
+# Setter for is_faceup
+#
+# Flips the card face-up/face-down
+#
+# * Returns CFConst.ReturnCode.CHANGED if the card actually changed rotation
+# * Returns CFConst.ReturnCode.OK if the card was already in the correct rotation
+func set_is_faceup_3d(value: bool, instant := false, check := false) -> int:
+	var retcode: int
+	if value == is_faceup:
+		retcode = CFConst.ReturnCode.OK
+	# We check if the parent is a valid instance
+	# If it is not, this is a viewport dupe card that has not finished
+	# it's ready() process
+	elif not check and is_instance_valid(get_parent()):
+		tokens.is_drawer_open = false
+		# We make sure to remove other tweens of the same type to avoid a deadlock
+		is_faceup = value
+		# When we change faceup state, we reset the is_viewed to false
+		if set_is_viewed(false) == CFConst.ReturnCode.FAILED:
+			print("ERROR: Something went unexpectedly in set_is_faceup")
+		if value:
+			_flip_card_3d($Control/Model/Card3D, value,instant)
+			# We need this check, as this node might not be ready
+			# Yet when a viewport focus dupe is instancing
+			buttons.set_button_visible("View", false)
+#			card_back.stop_card_back_animation()
+			# When we flip face up, we also want to show the dupe card
+			# in the focus viewport
+			# However we also need to protect this call from the dupe itself
+			# calling it when it hasn't yet been added to its parent
+			if cfc.NMAP.get("main", null) and get_parent():
+				# we need to check if there's actually a viewport focus
+				# card, as we may be flipping the card via code
+				if len(cfc.NMAP.main._previously_focused_cards):
+					# The currently active viewport focus is always in the
+					# _previously_focused_cards list, as the last card
+					var dupe_card = cfc.NMAP.main._previously_focused_cards.back()
+					var dupe_model = dupe_card.get_node("Control/Model/Card3D")
+					_flip_card_3d(dupe_model, value, true)
+		else:
+			_flip_card_3d($Control/Model/Card3D, value,instant)
+			buttons.set_button_visible("View", true)
+#			if get_parent() == cfc.NMAP.board:
+#			card_back.start_card_back_animation()
+			# When we flip face down, we also want to hide the dupe card
+			# in the focus viewport
+			# However we also need to protect this call from the dupe itself
+			# calling it when it hasn't yet been added to its parent
+			if cfc.NMAP.get("main", null):
+				# we need to check if there's actually a viewport focus
+				# card, as we may be flipping the card via code
+				if len(cfc.NMAP.main._previously_focused_cards):
+					var dupe_card = cfc.NMAP.main._previously_focused_cards.back()
+					var dupe_model = dupe_card.get_node("Control/Model/Card3D")
+					_flip_card_3d(dupe_model, value, true)
 		retcode = CFConst.ReturnCode.CHANGED
 		emit_signal("card_flipped", self, "card_flipped", {"is_faceup": value})
 	# If we're doing a check, then we just report CHANGED.
@@ -649,13 +747,19 @@ func set_is_viewed(value: bool) -> int:
 			retcode = CFConst.ReturnCode.OK
 		else:
 			is_viewed = true
-			if get_parent() != null and get_tree().get_root().has_node('Main'):
-				var dupe_front = cfc.NMAP.main._previously_focused_cards.back()\
-						.get_node("Control/Front")
-				var dupe_back = cfc.NMAP.main._previously_focused_cards.back()\
-						.get_node("Control/Back")
-				_flip_card(dupe_back, dupe_front, true)
-			card_back.is_viewed_visible = true
+			if cfc.card_use_3d:
+				if get_parent() != null and get_tree().get_root().has_node('Main'):
+					var dupe_model = cfc.NMAP.main._previously_focused_cards.back()\
+							.get_node("Control/Model/Card3D")
+					_flip_card_3d(dupe_model, true, true)
+			else:
+				if get_parent() != null and get_tree().get_root().has_node('Main'):
+					var dupe_front = cfc.NMAP.main._previously_focused_cards.back()\
+							.get_node("Control/Front")
+					var dupe_back = cfc.NMAP.main._previously_focused_cards.back()\
+							.get_node("Control/Back")
+					_flip_card_2d(dupe_back, dupe_front, true)
+				card_back.is_viewed_visible = true
 			retcode = CFConst.ReturnCode.CHANGED
 			# We only emit a signal when we view the card
 			# not when we unview it as that happens naturally
@@ -1714,6 +1818,18 @@ func _flip_card(to_invisible: Control, to_visible: Control, instant := false) ->
 		_flip_tween.start()
 
 
+func _flip_card_3d(card_model, face_up, instant := false) -> void:
+	if instant:
+		card_model.face_up(face_up,instant)
+	# When dupe cards in focus viewport are created, they have parent == null
+	# This causes them to raise an error trying to create a tween
+	# So we skip that.
+	elif get_parent() == null:
+		pass
+	else:
+		card_model.face_up(face_up,instant)
+
+
 # Card rotation animation
 func _add_tween_rotation(
 		expected_rotation: float,
@@ -2087,7 +2203,7 @@ func _process_card_state() -> void:
 			# we allow the player hovering over it to see it
 			if not is_faceup:
 				if is_viewed:
-					_flip_card($Control/Back,$Control/Front, true)
+					_flip_card_2d($Control/Back,$Control/Front, true)
 
 
 # Get the angle on the ellipse

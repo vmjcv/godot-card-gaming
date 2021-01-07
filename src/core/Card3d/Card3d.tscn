@@ -1,0 +1,24 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://src/core/Card3d/Card3d.gd" type="Script" id=1]
+
+[node name="Card3D" type="TextureRect"]
+margin_right = 150.0
+margin_bottom = 240.0
+expand = true
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+card_front_type = 3
+card_center_type = 6
+card_back_type = 5
+
+[node name="Viewport" type="Viewport" parent="."]
+size = Vector2( 450, 720 )
+size_override_stretch = true
+own_world = true
+transparent_bg = true
+hdr = false
+debug_draw = 1
+render_target_v_flip = true

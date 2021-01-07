@@ -84,6 +84,8 @@ const FOCUS_STYLE = FocusStyle.BOTH
 # If set to false, the hand will be presented with all cards
 # horizontally aligned
 const HAND_USE_OVAL_SHAPE := true
+const CARD_USE_3D := true
+
 # The below scales down cards down while being dragged.
 #
 # if you don't want this behaviour, change it to Vector2(1,1)
@@ -93,6 +95,12 @@ const CARD_SCALE_WHILE_DRAGGING := Vector2(0.4, 0.4)
 const PATH_CORE := "res://src/core/"
 # The path where scenes and scripts customized for this specific game exist
 # (e.g. board, card back etc)
+const PATH_CARD_3D := PATH_CORE + "Card3d/"
+const PATH_CARD_3D_MODEL := PATH_CARD_3D + "res/"
+const PATH_CARD_3D_MODEL_FRONT := PATH_CARD_3D_MODEL + "front/"
+const PATH_CARD_3D_MODEL_BACK := PATH_CARD_3D_MODEL + "back/"
+const PATH_CARD_3D_MODEL_CENTER := PATH_CARD_3D_MODEL + "center/"
+
 const PATH_CUSTOM := "res://src/custom/"
 # The path where card template scenes exist.
 # These is usually one scene per type of card in the game

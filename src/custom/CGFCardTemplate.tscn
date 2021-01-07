@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://src/core/CardTemplate.tscn" type="PackedScene" id=1]
 [ext_resource path="res://src/custom/CGFCardTemplate.gd" type="Script" id=2]
@@ -6,12 +6,20 @@
 [ext_resource path="res://src/custom/CGFManipulationButtons.gd" type="Script" id=4]
 [ext_resource path="res://src/custom/CGFCardManipulationButton.tscn" type="PackedScene" id=5]
 [ext_resource path="res://src/custom/CGFCardBack.tscn" type="PackedScene" id=6]
+[ext_resource path="res://src/core/Card3d/Card3d.tscn" type="PackedScene" id=7]
 
 [node name="Card" instance=ExtResource( 1 )]
 script = ExtResource( 2 )
+properties = {
+
+}
+scripts = {
+
+}
 card_back_design = ExtResource( 6 )
 card_front_design = ExtResource( 3 )
+card_model_design = ExtResource( 7 )
 
-[node name="ManipulationButtons" parent="Control" index="4"]
+[node name="ManipulationButtons" parent="Control" index="5"]
 script = ExtResource( 4 )
 manipulation_button = ExtResource( 5 )

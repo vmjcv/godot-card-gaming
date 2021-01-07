@@ -112,11 +112,19 @@ __meta__ = {
 
 [node name="OvalHandToggle" type="CheckButton" parent="."]
 margin_left = 405.31
-margin_top = 1.12245
-margin_right = 594.31
 margin_bottom = 41.1225
 pressed = true
 text = "Oval Hand Shape"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Card3dToggle" type="CheckButton" parent="."]
+margin_left = 594.0
+margin_right = 722.0
+margin_bottom = 40.0
+pressed = true
+text = "3d Card"
 __meta__ = {
 "_edit_use_anchors_": false
 }
@@ -161,6 +169,7 @@ __meta__ = {
 [connection signal="pressed" from="ReshuffleAllDeck" to="." method="_on_ReshuffleAllDeck_pressed"]
 [connection signal="pressed" from="ReshuffleAllDiscard" to="." method="_on_ReshuffleAllDiscard_pressed"]
 [connection signal="toggled" from="OvalHandToggle" to="." method="_on_OvalHandToggle_toggled"]
+[connection signal="toggled" from="Card3dToggle" to="." method="_on_Card3dToggle_toggled"]
 [connection signal="toggled" from="Debug" to="." method="_on_Debug_toggled"]
 
 [editable path="Discard"]
