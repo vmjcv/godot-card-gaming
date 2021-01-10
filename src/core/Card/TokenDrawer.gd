@@ -112,7 +112,7 @@ func mod_token(token_name : String, mod := 1, set_to_mod := false, check := fals
 		# and set it to 1
 		if not token and mod > 0:
 			token = _TOKEN_SCENE.instance()
-			token.setup(token_name)
+			token.setup(token_name, self)
 			$Drawer/VBoxContainer.add_child(token)
 		# If the token node of this name has already been added to the card
 		# We just increment it by 1
@@ -155,9 +155,9 @@ func mod_token(token_name : String, mod := 1, set_to_mod := false, check := fals
 				token.expand()
 			retcode = CFConst.ReturnCode.CHANGED
 			owner_card.emit_signal("card_token_modified", owner_card, "card_token_modified",
-					{"token_name": token.get_token_name(),
-					"previous_token_value": prev_value,
-					"new_token_value": new_value})
+					{SP.TRIGGER_TOKEN_NAME: token.get_token_name(),
+					SP.TRIGGER_PREV_COUNT: prev_value,
+					SP.TRIGGER_NEW_COUNT: new_value})
 	return(retcode)
 
 

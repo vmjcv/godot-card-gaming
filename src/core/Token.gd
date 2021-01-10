@@ -6,6 +6,8 @@ extends HBoxContainer
 
 export var count := 0 setget set_count, get_count
 
+var token_drawer
+
 onready var count_label = $CenterContainer/Count
 
 # Called when the node enters the scene tree for the first time.
@@ -27,8 +29,9 @@ func _on_Remove_pressed() -> void:
 
 # Initializes the token with the right texture and name 
 # based on the values in the configuration
-func setup(token_name: String) -> void:
+func setup(token_name: String, _token_drawer = null) -> void:
 	name = token_name
+	token_drawer = _token_drawer
 	var textrect : TextureRect = $CenterContainer/TokenIcon
 	var new_texture = ImageTexture.new();
 	var tex = load(CFConst.PATH_TOKENS + CFConst.TOKENS_MAP[token_name])
@@ -52,7 +55,36 @@ func set_count(value := 1) -> void:
 
 # Returns the amount of tokens of this type
 func get_count() -> int:
-	return(count)
+	return(get_count_and_alterants().count)
+
+
+# Discovers the modified value of this token
+# from alterants
+#
+# Returns a dictionary with the following keys:
+# * count: The final value of this token after all modifications
+# * alteration: The full dictionary returned by
+#	CFScriptUtils.get_altered_value()
+func get_count_and_alterants() -> Dictionary:
+	var alteration = {
+		"value_alteration": 0,
+		"alterants_details": {}
+	}
+	# We do this check because in UT the token might not be
+	# assigned to a token_drawer
+	if token_drawer:
+		alteration = CFScriptUtils.get_altered_value(
+			token_drawer.owner_card,
+			"get_token",
+			{SP.KEY_TOKEN_NAME: name,},
+			count)
+		if alteration is GDScriptFunctionState:
+			alteration = yield(alteration, "completed")
+	var return_dict := {
+		"count": count + alteration.value_alteration,
+		"alteration": alteration
+	}
+	return(return_dict)
 
 
 # Reveals the Name label.
@@ -71,6 +103,7 @@ func retract() -> void:
 	$Name.visible = false
 	$MarginContainer.visible = false
 	$Buttons.visible = false
+
 
 # Returns the lowercase name of the token
 func get_token_name() -> String:

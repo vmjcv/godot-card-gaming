@@ -187,6 +187,16 @@ var _placement_slot : BoardPlacementSlot = null
 # This hold modifiers to card properties that will be active temporarily.
 # This avoids triggering the card_properties_modified signal.
 #
+# Each key is a ScriptingEngine reference, and each value is a dictionary
+# With the following keys:
+# * requesting_card: The card object which has requested this temp modifier
+# * modifer: A dictionary with all the modifications requested by this card
+#	Each key is a (numerical) property name,
+#	and value is the temp modifier requested for this property.
+#
+# This allows multiple modifiers may be active at the same time, even from
+# nested tasks on the same card during an execute_scripts task.
+#
 # Typically used during
 # an [execute_scripts()](ScriptingEngine#execute_scripts] task.
 var temp_properties_modifiers := {}
@@ -195,7 +205,9 @@ var temp_properties_modifiers := {}
 var _debugger_hook := false
 # Debug for stuck tweens
 var _tween_stuck_time = 0
-
+# This variable is being used to avoid an infinite loop when alterants
+# are altering get_property based on filtering properties of cards
+var _is_property_being_altered := false
 # The node which has the design of the card back
 # And the methods which are used for its potential animation.
 # This will be loaded in `_init_card_back()`
@@ -554,16 +566,64 @@ func modify_property(property: String, value, is_init = false, check := false) -
 
 # Retrieves the value of a property. This should always be used instead of
 # properties.get() as it takes into account the temp_properties_modifiers var
+# and also checks for alterant scripts
 func get_property(property: String):
+	return(get_property_and_alterants(property).value)
+
+
+# Discovers the modified value of the specified property based
+# on temp_properties_modifiers and alterants (if it's a number).
+#
+# Returns a dictionary with the following keys:
+# * value: The final value of this property after all modifications
+# * alteration: The  full dictionary returned by
+#	CFScriptUtils.get_altered_value() but including details about
+#	temp_properties_modifiers
+func get_property_and_alterants(property: String) -> Dictionary:
 	var property_value = properties.get(property)
+	var alteration = {
+		"value_alteration": 0,
+		"alterants_details": {}
+	}
+	var temp_modifiers = {
+		"value_modification": 0,
+		"modifier_details": {}
+	}
 	if property in CardConfig.PROPERTIES_NUMBERS:
-		var prop_mod = temp_properties_modifiers.get(property,0)
-		property_value += prop_mod
+		for modifiers_dict in temp_properties_modifiers.values():
+			temp_modifiers.value_modification += \
+					modifiers_dict.modifier.get(property,0)
+			# Each value in the modifier_details dictionary is another dictionary
+			# Where the key is the card object which has added this modifier
+			# And the value is the modifier this specific card added to the total
+			temp_modifiers.modifier_details[modifiers_dict.requesting_card] =\
+					modifiers_dict.modifier.get(property,0)
+		property_value += temp_modifiers.value_modification
+		# We use this flag to avoid an alteranty which alters get_property
+		# by filtering the card's properties, causing an infinite loop.
+		if not _is_property_being_altered:
+			_is_property_being_altered = true
+			alteration = CFScriptUtils.get_altered_value(
+				self,
+				"get_property",
+				{SP.KEY_PROPERTY_NAME: property,},
+				properties.get(property))
+			if alteration is GDScriptFunctionState:
+				alteration = yield(alteration, "completed")
+			_is_property_being_altered = false
+			# The first element is always the total modifier from all alterants
+			property_value += alteration.value_alteration
 		if property_value < 0:
 			property_value = 0
-	return(property_value)
+	var return_dict := {
+		"value": property_value,
+		"alteration": alteration,
+		"temp_modifiers": temp_modifiers
+	}
+	return(return_dict)
 
 
+# Sets the card size and adjusts all nodes depending on it.
 func set_card_size(value: Vector2) -> void:
 	card_size = value
 	_control.rect_min_size = value
@@ -905,7 +965,8 @@ func get_potential_placement_slot() -> BoardPlacementSlot:
 # among other card. If it's -1, card will be placed on the bottom of the pile
 func move_to(targetHost: Node,
 		index := -1,
-		board_position = null) -> void:
+		board_position = null,
+		scripted_move = false) -> void:
 #	if cfc.focus_style:
 #		# We make to sure to clear the viewport focus because
 #		# the mouse exited signal will not fire after drag&drop in a container
@@ -918,7 +979,7 @@ func move_to(targetHost: Node,
 	# if the placement to the board requested is invalid
 	# depending on the board_placement variable
 	targetHost = targetHost.get_final_placement_node(self)
-	targetHost = common_pre_move_scripts(targetHost, parentHost)
+	targetHost = common_pre_move_scripts(targetHost, parentHost, scripted_move)
 	if targetHost == cfc.NMAP.board and not board_position:
 		match board_placement:
 			BoardPlacement.NONE:
@@ -1138,7 +1199,7 @@ func move_to(targetHost: Node,
 				raise()
 		elif "CardPopUpSlot" in parentHost.name:
 			state = CardState.IN_POPUP
-	common_post_move_scripts(targetHost, parentHost)
+	common_post_move_scripts(targetHost, parentHost, scripted_move)
 
 
 # Executes the tasks defined in the card's scripts in order.
@@ -1542,7 +1603,7 @@ func check_play_costs() -> Color:
 # to instead be redirected to a pile.
 # warning-ignore:unused_argument
 # warning-ignore:unused_argument
-func common_pre_move_scripts(new_host: Node, old_host: Node) -> Node:
+func common_pre_move_scripts(new_host: Node, old_host: Node, scripted_move: bool) -> Node:
 	return(new_host)
 
 # This function can be overriden by any class extending Card, in order to provide
@@ -1554,7 +1615,7 @@ func common_pre_move_scripts(new_host: Node, old_host: Node) -> Node:
 # places on the table.
 # warning-ignore:unused_argument
 # warning-ignore:unused_argument
-func common_post_move_scripts(new_host: Node, old_host: Node) -> void:
+func common_post_move_scripts(new_host: Node, old_host: Node, scripted_move: bool) -> void:
 	pass
 
 
@@ -1579,7 +1640,7 @@ func common_post_execution_scripts(trigger: String) -> void:
 
 # Returns true is the card has hand_drag_starts_targeting set to true
 # is currently in hand, and has a targetting task.
-# 
+#
 # This is used by the _on_Card_gui_input to determine if it should fire
 # scripts on the card during an attempt to drag it from hand.
 func _has_targeting_cost_hand_script() -> bool:
